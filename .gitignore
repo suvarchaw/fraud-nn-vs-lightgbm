@@ -1,0 +1,22 @@
+# data and models are never committed
+data/
+models/
+*.csv
+*.parquet
+*.pkl
+*.pt
+*.pth
+*.joblib
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.env
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
