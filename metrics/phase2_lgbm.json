@@ -1,0 +1,30 @@
+{
+  "seed": 42,
+  "n_features": 431,
+  "n_train": 380815,
+  "n_val": 84093,
+  "val_fraud_rate": 0.03656665834254932,
+  "best_iteration": 557,
+  "stop_metric": "auc",
+  "patience": 100,
+  "model": {
+    "roc_auc": 0.9188511255252522,
+    "pr_auc": 0.569089068985731
+  },
+  "no_skill": {
+    "roc_auc": 0.5,
+    "pr_auc": 0.03656665834254932
+  },
+  "top10_gain_share_%": {
+    "V258": 11.48,
+    "C1": 7.21,
+    "DeviceInfo": 5.64,
+    "C14": 5.23,
+    "C13": 2.91,
+    "card2": 2.72,
+    "V294": 2.63,
+    "card1": 2.31,
+    "R_emaildomain": 2.26,
+    "TransactionAmt": 2.22
+  }
+}
