@@ -20,3 +20,7 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# personal study notes (local only)
+GLOSSARY.md
+INTERVIEW.md

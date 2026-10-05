@@ -39,7 +39,7 @@ For each phase, write:
 
 **Prediction (before running):** validation ROC-AUC about 0.90-0.95; validation PR-AUC about 0.5-0.7 (no-skill PR-AUC is about 0.035).
 
-**Explain-back:**
+**Explain-back:** "Phase 2 included training a LightGBM model to be used as a baseline. We validated on ROC-AUC (one fraud and one legit payment) as 0.919 and PR-AUC (precision/recall) as 0.569. We also did a break-it exercise where we left the answer in a copy, which proves leakage." (Missing, to add next time: trained on train only, scored on validation, and validation is slightly optimistic because it picked the tree count.)
 
 **Break-it exercise:** in a scratch copy I left isFraud in the features. You predicted ~0.95 and concluded "suspect leakage". Result: validation ROC-AUC 1.0000, PR-AUC 1.0000, and early stopping ended after 1 tree: the model read the answer directly. Your conclusion was right; the score was even higher than predicted. A near-perfect score on rare fraud means check for leakage first.
 
