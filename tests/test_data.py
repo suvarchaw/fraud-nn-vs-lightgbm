@@ -1,12 +1,6 @@
 import pandas as pd
-import pytest
 
-from src.data import RAW, load_raw
-
-
-@pytest.fixture(scope="module")
-def df():
-    return load_raw()
+from src.data import RAW
 
 
 def test_identity_transaction_id_unique():
