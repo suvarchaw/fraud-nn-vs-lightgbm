@@ -81,3 +81,13 @@ For each phase, write:
 - LightGBM and PyTorch each bring their own OpenMP thread library; after LightGBM has trained in a process, PyTorch on 4 threads freezes (deadlock). The network tests therefore run on 1 thread (still fixed, so same-seed still repeats); real runs are separate processes with 4 threads. Phase 4 must train the two models in separate processes.
 - Train score is measured on a fixed 50,000-row train sample to keep it quick; it is only used to read the train-validation gap.
 - No model file saved: Phase 4 retrains 5 seeds; Phase 7 saves the final model.
+
+## Phase 4: equal tuning + multi-seed comparison
+
+**Prediction (before running):** gap stays (no reason given).
+
+**Verdict rule (fixed before any run, on val ROC-AUC over the 5 final seeds), checked in this order:**
+1. "Flipped": the neural net's worst seed beats LightGBM's best seed.
+2. "Gap closed": the mean difference is under 0.005, or the two models' min-max ranges overlap.
+3. Otherwise "gap stayed".
+`python -m src.compare report` prints which one applies.

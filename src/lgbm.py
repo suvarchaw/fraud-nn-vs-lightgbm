@@ -22,14 +22,17 @@ def feature_names(df):
     return [c for c in df.columns if c not in EXCLUDED]
 
 
-def train(df, seed=SEED, max_trees=MAX_TREES):
-    """Fit on train rows only. Returns (model, features, train_index, val_x, val_y)."""
+def train(df, seed=SEED, max_trees=MAX_TREES, params=None):
+    """Fit on train rows only. `params` (Phase 4 tuning) override the Phase 2 settings.
+
+    Returns (model, features, train_index, val_x, val_y)."""
     tr, val, _ = split_by_time(df)  # test block is discarded, never named
     feats = feature_names(df)
     model = lgb.LGBMClassifier(
         n_estimators=max_trees, learning_rate=LEARNING_RATE, random_state=seed,
         deterministic=True, force_row_wise=True, n_jobs=4, verbose=-1,  # fixed 4 threads: repeatable
     )
+    model.set_params(**(params or {}))
     model.fit(
         tr[feats], tr["isFraud"],
         eval_X=val[feats], eval_y=val["isFraud"], eval_metric=STOP_METRIC,

@@ -17,3 +17,43 @@ def df():
     before = _fingerprint(data)
     yield data
     assert _fingerprint(data) == before, "a test changed the shared df; use df.copy()"
+
+
+@pytest.fixture
+def one_thread(monkeypatch):
+    """LightGBM and PyTorch each bring their own OpenMP (thread) library. After LightGBM has trained in this
+    process, PyTorch on 4 threads deadlocks. One thread avoids it and is still a fixed count, so results still
+    repeat. Real runs (python -m src.nn, python -m src.compare) are separate processes with 4 threads.
+    Test files that train a network opt in with pytestmark."""
+    import torch
+
+    import src.nn as nnet
+    monkeypatch.setattr(nnet, "THREADS", 1)
+    torch.set_num_threads(1)
+
+
+@pytest.fixture(scope="session")
+def prepared(df):
+    """The network's real pipeline, run once per test run: (prep, train data, validation data)."""
+    import src.nn as nnet
+    return nnet.prepare(df)
+
+
+@pytest.fixture(scope="session")
+def scrambled(df):
+    """Copy of df with every test-block row scrambled: features, labels and 5 category columns get a new label.
+    A Phase 4 trial must score exactly the same on it, proving nothing reads test rows."""
+    from src.lgbm import feature_names
+    from src.split import split_by_time
+    _, _, test = split_by_time(df)
+    d = df.copy()
+    feats = feature_names(df)
+    cat = [c for c in feats if str(d[c].dtype) == "category"]
+    for c in feats:
+        if c in cat[:5]:
+            d[c] = d[c].cat.add_categories(["never-seen.example"])
+            d.loc[test.index, c] = "never-seen.example"
+        elif c not in cat:
+            d.loc[test.index, c] = d.loc[test.index, c] * -7 + 3
+    d.loc[test.index, "isFraud"] = 1 - d.loc[test.index, "isFraud"]
+    return d

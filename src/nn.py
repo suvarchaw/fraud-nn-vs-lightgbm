@@ -23,6 +23,7 @@ HIDDEN = (256, 128)
 DROPOUT = 0.3
 LR = 1e-3
 BATCH = 1024
+CONFIG = {"hidden": HIDDEN, "dropout": DROPOUT, "lr": LR, "batch": BATCH, "weight_decay": 0.0}  # Phase 4 tunes these
 # Stopping rule reused from Phase 2: validation ROC-AUC, best one kept, patience (here in epochs, not trees).
 MAX_EPOCHS = 50
 PATIENCE = 5
@@ -95,12 +96,12 @@ def prepare(df, n_train=None, seed=SEED):
 class Net(nn.Module):
     """Embeddings for category columns, then Linear -> ReLU -> Dropout twice, then one output (a logit)."""
 
-    def __init__(self, n_num, slots, dropout=DROPOUT):
+    def __init__(self, n_num, slots, dropout=DROPOUT, hidden=HIDDEN):
         super().__init__()
         self.emb = nn.ModuleList(nn.Embedding(n, min(MAX_EMB, (n + 1) // 2)) for n in slots)
         width = n_num + sum(e.embedding_dim for e in self.emb)
         layers = []
-        for h in HIDDEN:
+        for h in hidden:
             layers += [nn.Linear(width, h), nn.ReLU(), nn.Dropout(dropout)]
             width = h
         self.mlp = nn.Sequential(*layers, nn.Linear(width, 1))
@@ -121,13 +122,13 @@ def setup(seed):
     torch.use_deterministic_algorithms(True)
 
 
-def run_epoch(net, opt, xn, xc, y, gen):
+def run_epoch(net, opt, xn, xc, y, gen, batch=BATCH):
     """One pass over all rows in shuffled batches. Returns the average training loss."""
     net.train()  # dropout on
     loss_fn, total = nn.BCEWithLogitsLoss(), 0.0
     order = torch.randperm(len(y), generator=gen)
-    for i in range(0, len(y), BATCH):
-        b = order[i:i + BATCH]
+    for i in range(0, len(y), batch):
+        b = order[i:i + batch]
         opt.zero_grad()
         loss = loss_fn(net(xn[b], xc[b]), y[b])
         loss.backward()  # backpropagation: work out which way to nudge each weight
@@ -146,22 +147,25 @@ def scores(y, p):
     return {"roc_auc": float(roc_auc_score(y, p)), "pr_auc": float(average_precision_score(y, p))}
 
 
-def train(df, seed=SEED, max_epochs=MAX_EPOCHS, n_train=None, shuffle_labels=False, verbose=True):
+def train(df, seed=SEED, max_epochs=MAX_EPOCHS, n_train=None, shuffle_labels=False, verbose=True,
+          cfg=None, data=None):
     """Fit on train rows, early-stop on validation ROC-AUC, keep the best epoch.
 
+    cfg: knobs (default CONFIG). data: output of prepare(df), so several runs in one process prepare once.
     Returns (net, prep, info, train_data, val_data).
     """
+    cfg = {**CONFIG, **(cfg or {})}
     setup(seed)
-    prep, (xn, xc, y), (vn, vc, vy) = prepare(df, n_train, seed)
+    prep, (xn, xc, y), (vn, vc, vy) = data or prepare(df, n_train, seed)
     if shuffle_labels:  # sanity check only: scrambles which train rows are fraud
         y = y[torch.randperm(len(y), generator=torch.Generator().manual_seed(seed))]
-    net = Net(xn.shape[1], slots(prep))
-    opt = torch.optim.Adam(net.parameters(), lr=LR)
+    net = Net(xn.shape[1], slots(prep), cfg["dropout"], cfg["hidden"])
+    opt = torch.optim.Adam(net.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     gen = torch.Generator().manual_seed(seed)
     best, best_ep, best_state, t_start = -1.0, 0, None, time.time()
     for ep in range(1, max_epochs + 1):
         t0 = time.time()
-        loss = run_epoch(net, opt, xn, xc, y, gen)
+        loss = run_epoch(net, opt, xn, xc, y, gen, cfg["batch"])
         auc = roc_auc_score(vy, predict(net, vn, vc))
         if auc > best:
             best, best_ep = auc, ep

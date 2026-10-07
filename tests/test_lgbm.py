@@ -1,3 +1,4 @@
+import src.compare as cmp
 from src.lgbm import feature_names, scores, train
 from src.split import split_by_time
 
@@ -13,13 +14,14 @@ def test_features_exclude_answer_id_and_time(df):
 
 def test_fitted_only_on_train_rows(df):
     tr, val, test = split_by_time(df)
-    model, feats, idx, _, _ = train(df, max_trees=SMALL)
+    model, feats, idx, val_x, _ = train(df, max_trees=SMALL)
     # the model's OWN record of how many rows it saw, not what our function reports
     seen = int(model.booster_.trees_to_dataframe().query("tree_index == 0").iloc[0]["count"])
     assert seen == len(tr)
     assert seen != len(tr) + len(val)
     # the table handed to fit is exactly the train block, disjoint from validation and test
     assert idx.equals(tr.index)
+    assert val_x.index.equals(val.index)  # with test_nn's twin test: both models see identical rows
     assert not set(idx) & set(val.index)
     assert not set(idx) & set(test.index)
     # category labels the model stored are the train table's labels
@@ -32,3 +34,8 @@ def test_same_seed_same_score(df):
     a = scores(*(lambda r: (r[0], r[3], r[4]))(train(df, seed=7, max_trees=SMALL)))
     b = scores(*(lambda r: (r[0], r[3], r[4]))(train(df, seed=7, max_trees=SMALL)))
     assert a == b
+
+
+def test_phase4_trial_never_touches_test_rows(df, scrambled):
+    cfg = cmp.sample_configs("lgbm")[1]
+    assert cmp.run("lgbm", df, cfg, 7, max_trees=SMALL)["val"] == cmp.run("lgbm", scrambled, cfg, 7, max_trees=SMALL)["val"]

@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 import torch
 
+import src.compare as cmp
 import src.lgbm
 import src.nn as nnet
 from src.split import split_by_time
@@ -10,19 +11,7 @@ from src.split import split_by_time
 NEW_LABEL = "never-seen.example"
 
 
-@pytest.fixture(autouse=True)
-def one_thread(monkeypatch):
-    """LightGBM and PyTorch each bring their own OpenMP (thread) library. After LightGBM has trained in this
-    process (test_lgbm.py runs first), PyTorch on 4 threads deadlocks. One thread avoids it and is still a
-    fixed count, so results still repeat. Real runs (python -m src.nn) are separate processes with 4 threads."""
-    monkeypatch.setattr(nnet, "THREADS", 1)
-    torch.set_num_threads(1)
-
-
-@pytest.fixture(scope="module")
-def prepared(df):
-    """The real pipeline, run once for this file: (prep, train data, validation data)."""
-    return nnet.prepare(df)
+pytestmark = pytest.mark.usefixtures("one_thread")  # fixture in conftest.py
 
 
 def test_features_identical_to_lightgbm(df, prepared):
@@ -93,3 +82,18 @@ def test_same_seed_same_score(df):
     a = nnet.train(df, seed=7, max_epochs=1, n_train=20_000, verbose=False)[2]["val"]
     b = nnet.train(df, seed=7, max_epochs=1, n_train=20_000, verbose=False)[2]["val"]
     assert a == b
+
+
+def test_sees_same_rows_as_lightgbm(df, prepared):
+    """Twin of test_lgbm's row check: both models get exactly split_by_time's train and validation rows, in order."""
+    tr, val, _ = split_by_time(df)
+    prep, (_, _, y), (vn, vc, vy) = prepared
+    assert np.array_equal(y.numpy(), tr["isFraud"].to_numpy("float32"))
+    assert np.array_equal(vy.numpy(), val["isFraud"].to_numpy("float32"))
+    xn, xc = nnet.transform(val, prep)
+    assert torch.equal(xn, vn) and torch.equal(xc, vc)
+
+
+def test_phase4_trial_never_touches_test_rows(df, scrambled):
+    cfg, caps = cmp.sample_configs("nn")[1], {"max_epochs": 1, "n_train": 20_000}
+    assert cmp.run("nn", df, cfg, 7, **caps)["val"] == cmp.run("nn", scrambled, cfg, 7, **caps)["val"]
