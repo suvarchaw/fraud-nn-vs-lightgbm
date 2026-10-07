@@ -59,7 +59,7 @@ For each phase, write:
 
 **Prediction (before running):** "im not sure just guessing that it loses on roc-auc and on pr-auc" (no reason given).
 
-**Explain-back:**
+**Explain-back:** "we trained a neural model on the same data and found out that lightgbm and the neural model cant train in the same program run. we also observed that peeking at future data doesnt change the score. in the one run we did the neural model lost to the lightgbm (neural model score for next month-0.879 light gbm- 0.919)" (To fix next time: peeking changed the score only a little (0.8788 -> 0.8791) but is still cheating, which is why tests, not scores, must catch it. Missing: averages come only from older months because the future is not available in real life, so using it flatters the score. The thread freeze is a side issue, not a main finding.)
 
 **Break-it exercise:** in a scratch copy, the medians, means and standard deviations were computed from train + validation together. Your prediction: "hardly". Result: validation ROC-AUC 0.8788 -> 0.8791, PR-AUC 0.5116 -> 0.5164, so your prediction was right. Tests 2 (statistics equal a train-only recount; first mismatch: TransactionAmt median 4.2478 vs 4.2525) and 3 (changing validation must not change any statistic) both failed and caught it. Lesson: this leak is invisible in the score, so only a test catches it.
 
