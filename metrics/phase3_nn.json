@@ -1,0 +1,42 @@
+{
+  "seed": 42,
+  "n_features": 431,
+  "n_numeric": 400,
+  "n_category": 31,
+  "n_missing_flags": 341,
+  "n_inputs": 895,
+  "n_params": 274187,
+  "n_train": 380815,
+  "n_val": 84093,
+  "best_epoch": 4,
+  "epochs_run": 9,
+  "train_seconds": 28.1,
+  "config": {
+    "hidden": [
+      256,
+      128
+    ],
+    "dropout": 0.3,
+    "lr": 0.001,
+    "batch": 1024,
+    "max_epochs": 50,
+    "patience_epochs": 5,
+    "min_count": 10,
+    "clip": 5.0,
+    "threads": 4,
+    "device": "cpu"
+  },
+  "train_sample": {
+    "rows": 50000,
+    "roc_auc": 0.9092935000990974,
+    "pr_auc": 0.632237233525004
+  },
+  "model": {
+    "roc_auc": 0.8787528797675594,
+    "pr_auc": 0.5115933607475522
+  },
+  "no_skill": {
+    "roc_auc": 0.5,
+    "pr_auc": 0.03656665834254932
+  }
+}

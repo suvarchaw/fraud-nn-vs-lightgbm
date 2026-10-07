@@ -8,3 +8,4 @@ nbconvert
 pytest
 lightgbm
 scikit-learn
+torch

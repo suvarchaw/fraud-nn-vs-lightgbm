@@ -54,3 +54,30 @@ For each phase, write:
 - Determinism: seed 42 plus deterministic=True, force_row_wise=True and a fixed 4 threads (the thread count must stay fixed for repeatable results). Checked by a test.
 - "Trained only on train" test reads the row count from the model's own first tree (`trees_to_dataframe`), because a check against rows our own function reports can be fooled by a bug in that function.
 - The test block is discarded inside `train()` and never scored, counted or looked at in this phase.
+
+## Phase 3: neural network
+
+**Prediction (before running):** "im not sure just guessing that it loses on roc-auc and on pr-auc" (no reason given).
+
+**Explain-back:**
+
+**Break-it exercise:** in a scratch copy, the medians, means and standard deviations were computed from train + validation together. Your prediction: "hardly". Result: validation ROC-AUC 0.8788 -> 0.8791, PR-AUC 0.5116 -> 0.5164, so your prediction was right. Tests 2 (statistics equal a train-only recount; first mismatch: TransactionAmt median 4.2478 vs 4.2525) and 3 (changing validation must not change any statistic) both failed and caught it. Lesson: this leak is invisible in the score, so only a test catches it.
+
+**Result (seed 42, validation):** ROC-AUC 0.8788, PR-AUC 0.5116 (LightGBM 0.9189 / 0.5691; no-skill 0.5000 / 0.0366). Train-sample (50,000 rows) ROC-AUC 0.9093, a small gap of 0.03. Best epoch 4 of 9 run, 28 s training, 274,187 weights, 895 inputs (400 numbers + 341 missing flags + 154 embedding numbers). Your prediction (loses on both) was right for this seed. One seed cannot say which model is better; Phase 4 measures the spread.
+
+**Sanity checks:** overfit 1,000 train rows (dropout off, 300 epochs): train loss 0.0000, PASS. Shuffled labels: validation ROC-AUC 0.6321, which FAILED the pre-set rule 0.48-0.52. Investigation (scratch only): 20 untrained networks scored 0.29-0.68; 5 shuffled-label runs scored 0.26-0.70 on both sides of 0.5 (mean 0.45); shuffled labels overlapped true fraud 3.50% vs 3.42% by chance. Not a leak: the rule was wrong. A network that learned nothing still ranks payments by some random mix of the columns, and the columns relate to fraud, so its score lands far from 0.5 by accident. The +-0.005 "luck" estimate wrongly assumed scores unrelated to the columns. New rule (your choice): the shuffled-label score must not beat the best of 20 untrained networks by more than 0.05. 0.6321 <= 0.7254, PASS.
+
+**Decisions (Phase 3):**
+- Same rows (`split_by_time`), same columns (`feature_names` imported from `src/lgbm.py`, not copied), same metrics, no resampling, no class weights. Test set not touched.
+- Every preprocessing statistic comes from train rows only: median, mean, standard deviation, which columns get a missing flag, and each category's label list. Validation only has them applied.
+- Numbers: signed log on every number column (one rule, nothing fitted), blanks filled with the train median plus a 0/1 missing flag, then scaled with the train mean and standard deviation, then clipped to [-5, 5] so wild future values cannot swamp the sum.
+- Category label lists are counted in train rows. The pandas category list from `load_raw()` covers the whole file (including validation-only labels), so it is not used.
+- Labels seen fewer than 10 times in train share the "unknown" slot, so that slot is trained and new labels in the future get a learned meaning, not random numbers.
+- Embedding size = min(16, (slots + 1) // 2), counting slots (labels + unknown + missing), not labels as first planned, so a column with only rare labels still gets size 1, not 0.
+- ID-like columns stored as numbers (card1, addr1, ...) stay numbers, exactly as LightGBM saw them. This may disadvantage the network; changing it would be tuning (Phase 4).
+- One configuration, fixed before any validation score: 256 -> 128, ReLU, dropout 0.3, Adam, learning rate 0.001, batch 1,024. Not tuned.
+- Stopping rule reused from Phase 2: validation ROC-AUC, best kept, patience 5 epochs, cap 50. 100 trees and 5 epochs are not the same unit; what is shared is the rule.
+- CPU, not the Mac GPU (MPS), with deterministic algorithms and 4 fixed threads, because GPU results are not guaranteed to repeat exactly. Seed 42.
+- LightGBM and PyTorch each bring their own OpenMP thread library; after LightGBM has trained in a process, PyTorch on 4 threads freezes (deadlock). The network tests therefore run on 1 thread (still fixed, so same-seed still repeats); real runs are separate processes with 4 threads. Phase 4 must train the two models in separate processes.
+- Train score is measured on a fixed 50,000-row train sample to keep it quick; it is only used to read the train-validation gap.
+- No model file saved: Phase 4 retrains 5 seeds; Phase 7 saves the final model.
