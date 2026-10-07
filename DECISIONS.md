@@ -91,3 +91,32 @@ For each phase, write:
 2. "Gap closed": the mean difference is under 0.005, or the two models' min-max ranges overlap.
 3. Otherwise "gap stayed".
 `python -m src.compare report` prints which one applies.
+
+**Explain-back:**
+
+**Result (validation, 5 fresh seeds each):**
+| | LightGBM | neural net |
+|---|---|---|
+| baseline (trial 1, seed 42) ROC-AUC / PR-AUC | 0.9189 / 0.5691 | 0.8788 / 0.5116 |
+| best trial (seed 42) ROC-AUC / PR-AUC | 0.9273 / 0.5891 (trial 13) | 0.8906 / 0.5237 (trial 8) |
+| 5 seeds ROC-AUC mean +- std (min-max) | 0.9260 +- 0.0011 (0.9245-0.9270) | 0.8874 +- 0.0034 (0.8821-0.8899) |
+| 5 seeds PR-AUC mean +- std (min-max) | 0.5827 +- 0.0033 (0.5801-0.5881) | 0.5217 +- 0.0026 (0.5177-0.5243) |
+| tuning compute (20 trials) | 872 s | 887 s |
+
+Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.0387 (untuned: 0.0401), PR-AUC 0.0609 (untuned: 0.0575). The ROC-AUC gap is about 11 times the larger seed spread, and the network's best seed is below LightGBM's worst. Tuning helped both by a similar amount (ROC-AUC +0.0071 LightGBM, +0.0086 network). Your prediction (gap stays) was right. Total run time 41 min.
+
+**Decisions (Phase 4):**
+- Validation is used for BOTH tuning (choosing the settings) and early stopping (choosing the tree/epoch count). Both validation scores are therefore slightly optimistic, for both models. The untouched test set gives the honest number in the final report.
+- Random search for both: the same simple method, no new library, and no trial depends on earlier scores, so neither model benefits from a smarter search adapting to it.
+- 20 trials per model: trial 1 is the exact Phase 2/3 config, 19 are random draws. 19 random trials give about a 62% chance (1 - 0.95^19) of landing in the best 5% of the space. One fixed search seed (0).
+- 6 knobs each, learning rate tuned for both. Ranges centred on library defaults / Phase 2-3 values (reasons in the Phase 4 plan and `src/compare.py`).
+- Winner chosen on val ROC-AUC (the stopping metric). PR-AUC is recorded, never used to choose.
+- Tuning uses seed 42; the winner is retrained on fresh seeds 1-5. Reason: the winner may have won partly because seed 42 was lucky for it (winner's curse). Seen here: both winners scored lower on fresh seeds (LightGBM 0.9273 -> mean 0.9260, network 0.8906 -> mean 0.8874).
+- What the seed spread does NOT cover: all seeds share one time split and one validation month (a different period could reorder the models; Phase 6 looks at drift); a different search seed could pick a different winner; preprocessing and features are fixed.
+- No p-value: 5 seeds on one split are not independent samples of the world, so a significance test would overstate certainty.
+- Winners at a range edge (outer 10%; for 3-choice lists, the first or last choice): LightGBM num_leaves 218, reg_lambda 5.1; network lr 0.00287, width 512, batch 2048. Ranges were NOT widened afterwards (that would be extra tuning for one model), so both scores are lower bounds. The network has more edge knobs, all pointing to "bigger/faster", so it may have more headroom; a 3-choice list flags 2 of 3 values, so that signal is weak.
+- No trial or seed hit the 2,000-tree / 50-epoch cap.
+- Compute came out nearly equal (872 s vs 887 s). The plan guessed LightGBM trials would take twice as long; column sampling made them faster than the 55 s baseline.
+- `subsample_freq=1` is always passed: LightGBM silently ignores `subsample` without it, and with subsample 1.0 it changes nothing (trial 1 reproduced 0.9189 exactly; the network's trial 1 reproduced 0.8788).
+- Each model trains in its own process; files pass results along, and `report` imports neither library and refuses to compare unless trial counts, train/validation row fingerprints and seeds match.
+- New finding: the clash also runs the other way. If PyTorch's thread pool starts first in a process, LightGBM training then crashes (segmentation fault). So each model's training tests live in that model's own test file, which pytest runs in the safe order (test_lgbm before test_nn); test_compare.py trains nothing. The suite now takes ~2 min.

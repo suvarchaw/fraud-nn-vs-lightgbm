@@ -1,0 +1,99 @@
+{
+  "verdict": "gap stayed",
+  "models": {
+    "lgbm": {
+      "baseline_val": {
+        "roc_auc": 0.9188511255252522,
+        "pr_auc": 0.569089068985731
+      },
+      "best_trial": 13,
+      "best_trial_val": {
+        "roc_auc": 0.9272787598941677,
+        "pr_auc": 0.5891225997372499
+      },
+      "best_config": {
+        "learning_rate": 0.027573081620294645,
+        "num_leaves": 218,
+        "min_child_samples": 65,
+        "colsample_bytree": 0.3738466956991607,
+        "subsample": 0.8145540757698546,
+        "reg_lambda": 5.112322143469584
+      },
+      "seeds_val": {
+        "roc_auc": {
+          "mean": 0.9260221229569179,
+          "std": 0.0010667583460656008,
+          "min": 0.9245324706524114,
+          "max": 0.9270272851139977
+        },
+        "pr_auc": {
+          "mean": 0.5826915702593958,
+          "std": 0.0032922343911930725,
+          "min": 0.5801453243282424,
+          "max": 0.5880989824508206
+        }
+      },
+      "std_notes": {},
+      "trials_hit_cap": 0,
+      "seeds_hit_cap": 0,
+      "tune_seconds": 872,
+      "edge_knobs": [
+        "num_leaves",
+        "reg_lambda"
+      ]
+    },
+    "nn": {
+      "baseline_val": {
+        "roc_auc": 0.8787528797675594,
+        "pr_auc": 0.5115933607475522
+      },
+      "best_trial": 8,
+      "best_trial_val": {
+        "roc_auc": 0.8905573748842724,
+        "pr_auc": 0.5237343081073109
+      },
+      "best_config": {
+        "lr": 0.002870493669970106,
+        "layers": 2,
+        "width": 512,
+        "dropout": 0.32522963813390815,
+        "batch": 2048,
+        "weight_decay": 1.4681291844203373e-05
+      },
+      "seeds_val": {
+        "roc_auc": {
+          "mean": 0.887362016711332,
+          "std": 0.003353361977381691,
+          "min": 0.8821418105020122,
+          "max": 0.8899100832154734
+        },
+        "pr_auc": {
+          "mean": 0.5217485829480933,
+          "std": 0.0026358216621951993,
+          "min": 0.5176748263884607,
+          "max": 0.5243205070510799
+        }
+      },
+      "std_notes": {},
+      "trials_hit_cap": 0,
+      "seeds_hit_cap": 0,
+      "tune_seconds": 887,
+      "edge_knobs": [
+        "lr",
+        "width",
+        "batch"
+      ]
+    }
+  },
+  "gap_lgbm_minus_nn": {
+    "roc_auc": 0.03866010624558591,
+    "pr_auc": 0.06094298731130243
+  },
+  "caveats": [
+    "Validation chose both the settings and the stopping point, so both validation scores are slightly optimistic.",
+    "All seeds share one time split and one validation month; the spread does not cover a different period.",
+    "The spread does not cover the search itself: a different search seed could pick a different winner.",
+    "An edge knob means a better value may lie outside the range: that model's score is a lower bound.",
+    "Training seconds: LightGBM includes its per-run data conversion; network preprocessing (once per process) is not."
+  ]
+}

@@ -1,0 +1,417 @@
+{
+  "model": "lgbm",
+  "search": "random",
+  "n_trials": 20,
+  "search_seed": 0,
+  "tune_seed": 42,
+  "select_on": "val roc_auc",
+  "space": {
+    "learning_rate": [
+      "log",
+      0.02,
+      0.1
+    ],
+    "num_leaves": [
+      "intlog",
+      16,
+      256
+    ],
+    "min_child_samples": [
+      "intlog",
+      20,
+      500
+    ],
+    "colsample_bytree": [
+      "lin",
+      0.3,
+      1.0
+    ],
+    "subsample": [
+      "lin",
+      0.5,
+      1.0
+    ],
+    "reg_lambda": [
+      "log",
+      0.001,
+      10.0
+    ]
+  },
+  "rows": {
+    "n_train": 380815,
+    "n_val": 84093,
+    "train_hash": "6426193688120370946",
+    "val_hash": "14329205104174997529"
+  },
+  "best_trial": 13,
+  "best_config": {
+    "learning_rate": 0.027573081620294645,
+    "num_leaves": 218,
+    "min_child_samples": 65,
+    "colsample_bytree": 0.3738466956991607,
+    "subsample": 0.8145540757698546,
+    "reg_lambda": 5.112322143469584
+  },
+  "trials": [
+    {
+      "trial": 1,
+      "config": {
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_child_samples": 20,
+        "colsample_bytree": 1.0,
+        "subsample": 1.0,
+        "reg_lambda": 0.0
+      },
+      "val": {
+        "roc_auc": 0.9188511255252522,
+        "pr_auc": 0.569089068985731
+      },
+      "stop_at": 557,
+      "hit_cap": false,
+      "seconds": 33.2
+    },
+    {
+      "trial": 2,
+      "config": {
+        "learning_rate": 0.0557502872000373,
+        "num_leaves": 34,
+        "min_child_samples": 23,
+        "colsample_bytree": 0.31156934486997034,
+        "subsample": 0.9066351196001362,
+        "reg_lambda": 4.477363031844235
+      },
+      "val": {
+        "roc_auc": 0.9134230393848041,
+        "pr_auc": 0.5652852248844752
+      },
+      "stop_at": 512,
+      "hit_cap": false,
+      "seconds": 50.2
+    },
+    {
+      "trial": 3,
+      "config": {
+        "learning_rate": 0.053094582051437314,
+        "num_leaves": 121,
+        "min_child_samples": 115,
+        "colsample_bytree": 0.9545506966514377,
+        "subsample": 0.9079267770607661,
+        "reg_lambda": 0.0010255432976732015
+      },
+      "val": {
+        "roc_auc": 0.9241597882393696,
+        "pr_auc": 0.5799906593717719
+      },
+      "stop_at": 172,
+      "hit_cap": false,
+      "seconds": 28.4
+    },
+    {
+      "trial": 4,
+      "config": {
+        "learning_rate": 0.07949317926550194,
+        "num_leaves": 18,
+        "min_child_samples": 209,
+        "colsample_bytree": 0.4229589344217913,
+        "subsample": 0.9315894611749433,
+        "reg_lambda": 0.14650244778091637
+      },
+      "val": {
+        "roc_auc": 0.9068313615743727,
+        "pr_auc": 0.5616880861758443
+      },
+      "stop_at": 444,
+      "hit_cap": false,
+      "seconds": 45.6
+    },
+    {
+      "trial": 5,
+      "config": {
+        "learning_rate": 0.03239810563366366,
+        "num_leaves": 52,
+        "min_child_samples": 22,
+        "colsample_bytree": 0.3869982935496947,
+        "subsample": 0.8353122073468151,
+        "reg_lambda": 0.3879341802770626
+      },
+      "val": {
+        "roc_auc": 0.9205969324893574,
+        "pr_auc": 0.5789557529389354
+      },
+      "stop_at": 656,
+      "hit_cap": false,
+      "seconds": 69.3
+    },
+    {
+      "trial": 6,
+      "config": {
+        "learning_rate": 0.05384752290942554,
+        "num_leaves": 46,
+        "min_child_samples": 496,
+        "colsample_bytree": 0.986584737143361,
+        "subsample": 0.8427709922403473,
+        "reg_lambda": 0.3997947668399875
+      },
+      "val": {
+        "roc_auc": 0.9155860235414914,
+        "pr_auc": 0.5709966607153463
+      },
+      "stop_at": 380,
+      "hit_cap": false,
+      "seconds": 33.0
+    },
+    {
+      "trial": 7,
+      "config": {
+        "learning_rate": 0.06056665792642191,
+        "num_leaves": 47,
+        "min_child_samples": 31,
+        "colsample_bytree": 0.8050418381358572,
+        "subsample": 0.7626771612378629,
+        "reg_lambda": 0.01741676540832516
+      },
+      "val": {
+        "roc_auc": 0.9171932303711692,
+        "pr_auc": 0.571088026874804
+      },
+      "stop_at": 290,
+      "hit_cap": false,
+      "seconds": 25.9
+    },
+    {
+      "trial": 8,
+      "config": {
+        "learning_rate": 0.04371337499616111,
+        "num_leaves": 188,
+        "min_child_samples": 404,
+        "colsample_bytree": 0.5504566376963491,
+        "subsample": 0.7857649153648805,
+        "reg_lambda": 0.01938552487550625
+      },
+      "val": {
+        "roc_auc": 0.9241879120709298,
+        "pr_auc": 0.5788646134510997
+      },
+      "stop_at": 184,
+      "hit_cap": false,
+      "seconds": 46.5
+    },
+    {
+      "trial": 9,
+      "config": {
+        "learning_rate": 0.05205085771076079,
+        "num_leaves": 41,
+        "min_child_samples": 71,
+        "colsample_bytree": 0.9231920464033546,
+        "subsample": 0.6135787967666899,
+        "reg_lambda": 0.3109915427247616
+      },
+      "val": {
+        "roc_auc": 0.9181791479841779,
+        "pr_auc": 0.5774694258589973
+      },
+      "stop_at": 487,
+      "hit_cap": false,
+      "seconds": 33.1
+    },
+    {
+      "trial": 10,
+      "config": {
+        "learning_rate": 0.022895714487001676,
+        "num_leaves": 161,
+        "min_child_samples": 252,
+        "colsample_bytree": 0.4675586100950665,
+        "subsample": 0.938242115405352,
+        "reg_lambda": 0.0017150316503695498
+      },
+      "val": {
+        "roc_auc": 0.9256594710359457,
+        "pr_auc": 0.5888318155109387
+      },
+      "stop_at": 360,
+      "hit_cap": false,
+      "seconds": 64.2
+    },
+    {
+      "trial": 11,
+      "config": {
+        "learning_rate": 0.03435308460167606,
+        "num_leaves": 24,
+        "min_child_samples": 85,
+        "colsample_bytree": 0.8574269892011059,
+        "subsample": 0.6153211044968737,
+        "reg_lambda": 0.0016146753089889116
+      },
+      "val": {
+        "roc_auc": 0.913627681252003,
+        "pr_auc": 0.5626290482036048
+      },
+      "stop_at": 841,
+      "hit_cap": false,
+      "seconds": 40.4
+    },
+    {
+      "trial": 12,
+      "config": {
+        "learning_rate": 0.03835302264730491,
+        "num_leaves": 28,
+        "min_child_samples": 27,
+        "colsample_bytree": 0.7062326701907954,
+        "subsample": 0.6493480664094613,
+        "reg_lambda": 0.4875054911162474
+      },
+      "val": {
+        "roc_auc": 0.9182784313512987,
+        "pr_auc": 0.5760824810472098
+      },
+      "stop_at": 956,
+      "hit_cap": false,
+      "seconds": 45.5
+    },
+    {
+      "trial": 13,
+      "config": {
+        "learning_rate": 0.027573081620294645,
+        "num_leaves": 218,
+        "min_child_samples": 65,
+        "colsample_bytree": 0.3738466956991607,
+        "subsample": 0.8145540757698546,
+        "reg_lambda": 5.112322143469584
+      },
+      "val": {
+        "roc_auc": 0.9272787598941677,
+        "pr_auc": 0.5891225997372499
+      },
+      "stop_at": 388,
+      "hit_cap": false,
+      "seconds": 69.8
+    },
+    {
+      "trial": 14,
+      "config": {
+        "learning_rate": 0.04062940079820832,
+        "num_leaves": 226,
+        "min_child_samples": 100,
+        "colsample_bytree": 0.5976600373943528,
+        "subsample": 0.8101067260076888,
+        "reg_lambda": 9.558418047801041
+      },
+      "val": {
+        "roc_auc": 0.92461448795781,
+        "pr_auc": 0.578188433916143
+      },
+      "stop_at": 235,
+      "hit_cap": false,
+      "seconds": 51.0
+    },
+    {
+      "trial": 15,
+      "config": {
+        "learning_rate": 0.0921113527155837,
+        "num_leaves": 57,
+        "min_child_samples": 229,
+        "colsample_bytree": 0.6481958868413332,
+        "subsample": 0.7646560800983853,
+        "reg_lambda": 1.390409744645385
+      },
+      "val": {
+        "roc_auc": 0.9155641675131111,
+        "pr_auc": 0.5700190355688158
+      },
+      "stop_at": 171,
+      "hit_cap": false,
+      "seconds": 21.9
+    },
+    {
+      "trial": 16,
+      "config": {
+        "learning_rate": 0.038981809651090604,
+        "num_leaves": 123,
+        "min_child_samples": 197,
+        "colsample_bytree": 0.9524417806293647,
+        "subsample": 0.5574663166404525,
+        "reg_lambda": 0.8242528705685758
+      },
+      "val": {
+        "roc_auc": 0.9224677362673797,
+        "pr_auc": 0.5838248638322566
+      },
+      "stop_at": 275,
+      "hit_cap": false,
+      "seconds": 39.1
+    },
+    {
+      "trial": 17,
+      "config": {
+        "learning_rate": 0.08897571836789177,
+        "num_leaves": 234,
+        "min_child_samples": 21,
+        "colsample_bytree": 0.904548063171903,
+        "subsample": 0.9905975200331721,
+        "reg_lambda": 6.7428068360650135
+      },
+      "val": {
+        "roc_auc": 0.9239298162588381,
+        "pr_auc": 0.566469061258056
+      },
+      "stop_at": 91,
+      "hit_cap": false,
+      "seconds": 30.9
+    },
+    {
+      "trial": 18,
+      "config": {
+        "learning_rate": 0.02541040446726785,
+        "num_leaves": 237,
+        "min_child_samples": 351,
+        "colsample_bytree": 0.8756616792801493,
+        "subsample": 0.7399939619039161,
+        "reg_lambda": 0.008501424035972137
+      },
+      "val": {
+        "roc_auc": 0.926252614344258,
+        "pr_auc": 0.5844158597609075
+      },
+      "stop_at": 265,
+      "hit_cap": false,
+      "seconds": 50.5
+    },
+    {
+      "trial": 19,
+      "config": {
+        "learning_rate": 0.07269766590570553,
+        "num_leaves": 207,
+        "min_child_samples": 47,
+        "colsample_bytree": 0.6772540853355308,
+        "subsample": 0.7213764144872657,
+        "reg_lambda": 5.297479245747768
+      },
+      "val": {
+        "roc_auc": 0.9203438079704058,
+        "pr_auc": 0.5736813613921762
+      },
+      "stop_at": 137,
+      "hit_cap": false,
+      "seconds": 30.7
+    },
+    {
+      "trial": 20,
+      "config": {
+        "learning_rate": 0.021347438331446058,
+        "num_leaves": 122,
+        "min_child_samples": 145,
+        "colsample_bytree": 0.3198557555794647,
+        "subsample": 0.8596098864133701,
+        "reg_lambda": 0.0011586890909230652
+      },
+      "val": {
+        "roc_auc": 0.9264515142374263,
+        "pr_auc": 0.5867637075522909
+      },
+      "stop_at": 481,
+      "hit_cap": false,
+      "seconds": 63.0
+    }
+  ]
+}
