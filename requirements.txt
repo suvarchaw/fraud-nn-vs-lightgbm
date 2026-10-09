@@ -1,12 +1,15 @@
-pandas
-pyarrow
-numpy
-matplotlib
-jupyter
-ipykernel
-nbconvert
-pytest
-lightgbm
-scikit-learn
-torch
-pytest-timeout
+# Exact versions used for every recorded result (Python 3.12.15). Refit checks compare scores to 1e-9,
+# so other versions may refuse to rebuild or give different numbers.
+pandas==3.0.6
+pyarrow==25.0.1
+numpy==2.5.3
+scipy==1.18.1
+matplotlib==3.11.2
+jupyter==1.1.1
+ipykernel==7.4.0
+nbconvert==7.17.1
+pytest==9.1.1
+pytest-timeout==2.4.0
+lightgbm==4.7.0
+scikit-learn==1.9.1
+torch==2.14.1
