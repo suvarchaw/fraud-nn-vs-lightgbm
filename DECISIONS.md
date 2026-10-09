@@ -193,3 +193,51 @@ Paired day bootstrap (1,000 draws of 30 days): ROC-AUC gap LightGBM - network 0.
 - LightGBM stays ahead on ranking (bootstrap gap clearly above 0). In dollars at C = $10 it saves about $15k more than the network, but the two models' savings ranges overlap heavily. A paired savings difference was not computed, so the dollar gap is not established.
 - Top 1% (25-30 flags per day) is very precise (0.74-0.90) but catches only about 13% of fraud dollars. At C <= $2, flagging everything saves more than top 1%. The money-optimal rules want about 280 reviews per day; whether a team can do that is outside the data.
 - The PR-AUC gap widened on test (validation 0.061, test 0.098); the network's PR-AUC also varies more across seeds (std 0.0145).
+
+## Phase 6: drift (descriptive only)
+
+**Status of this phase:** the models are frozen (Phase 4 configs, seeds 1-5, trained on train only, files in `models/phase5/`), and the test set was spent in Phase 5. Nothing in this phase changes a model, a threshold or a config, and nothing here is used to choose between models. Every finding is descriptive, or a hypothesis to check on a future month.
+
+**Predictions (before running, 2026-10-09, no reasons given):**
+- (a) Weekly ROC-AUC over weeks 17-25: **stays flat**.
+- (b) Faster degrader: **neural net**.
+- (c) Adversarial AUC, train vs test: **0.6-0.8**.
+
+**Scoring rules for the predictions (fixed before any run):**
+- (a) Checked in this order: "falls steadily" = H1 holds; "bounces around" = the slope range includes 0 and max - min of the weekly AUC > 2 x the median bootstrap range width; "stays flat" = the slope range includes 0 and |slope| x 9 weeks < 0.01. Otherwise "unclear". A slope range above 0 is reported as "rises".
+- (b) Scored by the H2 rule. (c) Scored by the mean fold AUC.
+
+**Hypotheses (fixed before any run):**
+- Weeks are counted from the first payment (week 0-25). "Post-gap weeks" = weeks 17-25, the 9 weeks with no train or first-gap rows. The first gap is excluded because cards active at the end of train carry on into it, which flatters the model (memory, not lack of drift) and would fake a decline.
+- **H1:** weekly ROC-AUC (mean of 5 seeds) falls with distance from the end of training. Holds if the straight-line (OLS) slope over weeks 17-25 is < 0 and its day-bootstrap 95% range excludes 0.
+- **H2:** LightGBM degrades faster than the net (Phase 5 drop: 0.021 vs 0.012). Uses the paired bootstrap of (LightGBM slope - net slope) on the same draws: entirely < 0 = "LightGBM faster", entirely > 0 = "net faster", otherwise "cannot tell".
+- **"H1 holds" does not establish drift.** A falling slope fits both drift and validation optimism, because the validation weeks sit early in weeks 17-25. Only the block table (gap1 / val / gap2 / test) can separate the two.
+- **Alternative explanation for the Phase 5 drop difference:** validation optimism. Validation chose the settings and the stopping point, so validation scores sit a little high. That is not drift.
+- **What separates them:** gap2 (the 7 days between validation and test) was never used by anything and sits right after validation. Each block is scored as a whole, with day-bootstrap ranges.
+  - Optimism signature: the drop happens at the val -> gap2 edge (val above gap2, gap2 about equal to test), and there is no downward trend inside the validation weeks (17-19).
+  - Drift signature: a steady decline. The within-validation (weeks 17-19) and within-test (weeks 22-25) slopes are negative, and gap2 lies between val and test.
+  - If LightGBM's (val - gap2) step is bigger than the net's while their within-block slopes are similar, optimism explains the H2 difference.
+  - Expected: gap2 has ~20k rows over 7 days and a within-block slope has 3-4 points, so the likely answer is "inconclusive". It will be reported as such.
+- **Label-delay rule:** a fall confined to the final one or two weeks is flagged as "possible label delay, not drift". It is flagged if (i) H1 holds on weeks 17-25 but the slope over weeks 17-23 has a range including 0, or (ii) weeks 24 and/or 25 are the only weeks whose bootstrap range lies wholly below the mean of weeks 17-23.
+
+**Decisions (Phase 6):**
+- Re-scoring: only train and gap rows are scored new. Validation and test scores are reused from Phase 5's saved files, so the test rows are not re-scored. A sha256 of every file in `models/phase5/` is recorded and checked, to prove no model or frozen choice changed.
+- Exact reproducibility check: for each block, pool its rows, compute the AUC per seed, then average over the 5 seeds. It must match Phase 5 test (LightGBM 0.9053, net 0.8754) and Phase 4 validation (0.9260, 0.8874) to 4 decimals, or the run stops.
+- Weekly ranges: 1,000 draws of the week's 7 days with replacement (seed = week number), AUC averaged over the 5 seeds inside each draw (as in Phase 5). With only 7 days the range is slightly too narrow, and neighbouring weeks share cards and fraud rings, so the weeks are not independent.
+- PR-AUC moves with the weekly fraud rate (2.1%-5.1%) even for an unchanged model, so H1 and H2 use ROC-AUC only. PR-AUC is shown next to the fraud rate.
+- PSI bins:
+  - Numeric columns: 10 bins from train deciles (repeated edges merged), plus missing as its own bin.
+  - Category columns: one bin per label over every label seen in either block (labels unseen in train get train share 0), plus missing.
+  - Shares are floored at 0.0001 before the log, so a zero share does not give infinity.
+- PSI cut-offs 0.1 and 0.25 are industry conventions, not laws.
+- PSI noise floor: early-train vs late-train (train days split at the middle day) is reported next to val-vs-train and test-vs-train.
+- PSI "explained by cardinality alone": with no real change, PSI x n1n2/(n1+n2) is roughly chi-square with (bins - 1) degrees of freedom. A column whose PSI is below the 99th percentile of that is listed as explained by its number of labels alone. The approximation is rough when many labels have fewer than 5 rows.
+- Adversarial validation:
+  - It is a separate classifier: target = "which period is this row from", with the fraud model's features (no isFraud, no TransactionID, no TransactionDT). It never reads `models/phase5/` or the fraud label and saves no model.
+  - LightGBM library defaults (100 trees), not tuned. Same pairs as PSI: early vs late train (noise floor), train vs val, train vs test.
+  - Held-out AUC from 5 folds. Each fold = one contiguous fifth of the days of each period, so no random row split and no day in two folds.
+- Retraining exercise (exploratory, LightGBM only):
+  - Frozen Phase 4 config. Each seed uses its own Phase 5 tree count (339-431), with no early stopping, so nothing is tuned and no block is used to stop.
+  - Origins: day 90, 120, 150, each with a 7-day gap before it. Windows: expanding (all earlier days) vs trailing (last 45 days, fixed now). Each following 30-day block is scored.
+  - It reuses months already seen in earlier phases. The config and tree counts were tuned for a 109-day window, so the 45-day window is handicapped. Nothing is re-tuned to fix that.
+- Link between drift and the fraud model: LightGBM gain importance (mean of the 5 frozen models) vs PSI and adversarial importance. Rank correlation and top-20 overlap only. Any link is a hypothesis, not proof. The net has no gain importance.
