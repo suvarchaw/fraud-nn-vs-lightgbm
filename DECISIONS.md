@@ -128,6 +128,10 @@ Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.038
 - (b) Test ROC-AUC falls 0.01-0.03 below validation.
 - (c) The headline catches 40-60% of test fraud dollars.
 
+**Explain-back:** "the models percentages were already fairly honest so calibration didnt change the score much. the chance x amount caught about 81% of fraud dollars" (To fix next time: calibration never changes the ranking score (ROC-AUC); it changes the percentages, and because they were already close, the savings barely moved ($283,448 vs $283,508). Missing: why chance x amount beat the plain score cut-off. The cut-off ignores the amount, so a $5 and a $2,000 payment look the same; the amount rule spends reviews where the money is ($283k vs $239k at C = $10).)
+
+**Break-it exercise:** in a scratch run (not committed), `freeze()` was made to treat test rows as validation rows. The test "gap and test rows cannot move the choices" failed, so it would catch that leak. No prediction was asked this time.
+
 **Verdict rules (fixed before any run):**
 - (a) Raw (uncalibrated) test ECE, 5 seeds each. A model wins only if its worst seed is better than the other model's best seed; otherwise "about the same".
 - (b) Drop = Phase 4 mean val ROC-AUC - mean test ROC-AUC (5 seeds). Right only if BOTH models' drops fall in the predicted band.
