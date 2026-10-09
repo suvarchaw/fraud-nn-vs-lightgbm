@@ -470,3 +470,11 @@ A read-only review that tried to break the claims above. No model, threshold, te
   3. Otherwise (range includes 0, mean gain beyond +-$1,000) **not confirmed either way**. A "cannot tell" result is never scored as correct.
 - Read literally, the $1,000 band takes precedence. A mean gain of $1,000 or less is scored "confirmed" even if its range lies above 0. In that case the "retraining pays" verdict for the cell is still reported as "pays", next to the prediction score.
 - Overall (a): confirmed if both models are confirmed; wrong if either model is wrong; otherwise not confirmed either way.
+
+**Decisions (Phase 8, implementation, before any run):**
+- 25 distinct training sets per model, as estimated. D = 0 at day r and D = 7 at day r + 7 share a set because no payment falls exactly on any cut-off second (checked: the 8 rows on a day boundary are on days 0, 2, 26, 28, 95, 149, 167, 177, none of them a cut-off). A test pins the count at 25.
+- The net's preprocessing statistics come from each model's own training rows (labelled rows only), never from rows whose label is still out or from evaluation rows.
+- Test (c) flips evaluation-block labels only, not amounts: the amount is a model input, so changing it would legitimately change the scores of those rows.
+- Test (a) confirms the row count with a throwaway no-bagging LightGBM fit (subsample = 1), because the winning config bags about 81% of rows per tree.
+- Test caps (20 trees, 1 epoch) keep the suite near 5 minutes. They change how much a model learns, not which rows it sees.
+- `fit` is resumable: a training set whose score file exists is skipped. Per-row scores stay in git-ignored `models/phase8/`.
