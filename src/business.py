@@ -245,6 +245,8 @@ def score(model, block, run_id):
         lock = json.loads(LOCK.read_text()) if LOCK.exists() else {}
         if lock.get("run_id") != run_id or lock.get("status") != "running":
             sys.exit("refusing to score test rows outside the one locked test run")
+    if model == "nn":
+        import torch  # must load before LightGBM's library (src.lgbm below): the other order crashes PyTorch
     from src.data import load_raw
     from src.lgbm import feature_names
     df = load_raw(verbose=False)
@@ -255,7 +257,6 @@ def score(model, block, run_id):
         feats = feature_names(df)
         p = [lgb.Booster(model_file=str(OUT / f"lgbm_seed{s}.txt")).predict(rows[feats]) for s in SEEDS]
     else:
-        import torch
         from src import nn
         nn.setup(0)
         cfg = nn_knobs(_read("phase4_tune_nn.json")["best_config"])
