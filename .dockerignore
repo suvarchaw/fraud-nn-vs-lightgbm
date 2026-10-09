@@ -1,0 +1,4 @@
+*
+!service/
+!requirements-service.txt
+**/__pycache__

@@ -1,0 +1,23 @@
+# Exact versions for the scoring service image (Python 3.12). Service dependencies only: no PyTorch, no scikit-learn.
+# lightgbm/numpy/pandas/scipy match requirements.txt, the versions behind every recorded result.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+click==8.5.0
+fastapi==0.143.0
+h11==0.16.0
+idna==3.20
+lightgbm==4.7.0
+narwhals==2.26.0
+numpy==2.5.3
+opentelemetry-api==1.45.1
+pandas==3.0.6
+pydantic==2.14.0
+pydantic_core==2.50.0
+python-dateutil==2.9.0.post0
+scipy==1.18.1
+six==1.17.0
+starlette==1.7.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.54.0
