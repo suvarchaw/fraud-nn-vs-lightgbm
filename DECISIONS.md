@@ -159,3 +159,33 @@ Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.038
 - Rehearsal finding: the network's scoring step crashed (segmentation fault) because it loaded LightGBM's library (via `src.lgbm`) before PyTorch. Reproduced in isolation: `import lightgbm; import torch` then 4-thread maths exits 139; the reverse order runs. Third form of the same OpenMP clash. Fix: that step imports PyTorch first. The rehearsal caught it before the one test run was spent.
 - Calibrator choice (validation, held-out second half, Brier): LightGBM isotonic 0.02367 vs Platt 0.02379, a margin of 0.00012, just past the 0.0001 tie rule, so isotonic. Network: Platt 0.02570 vs isotonic 0.02570, tie, so Platt.
 - Fit check passed: all 10 retrained models reproduced their Phase 4 validation ROC-AUC exactly. Rehearsal: reloaded model files reproduced their validation scores exactly (max difference 0).
+
+**Result (test set, one run 2026-10-09, run 47c03d89; 5 seeds each; C is an assumption):**
+
+Headline (fixed in advance): LightGBM + calibrated rule at C = $10 saves **$283,448** of $451,813 test fraud dollars (62.7%, net of review cost), seed spread +- $2,750, day-bootstrap 95% range $241k-$329k. It catches **81.2% of fraud dollars** and 58.7% of fraud payments, with 278 flags per day at precision 0.208 (about 1 in 5 flags is fraud).
+
+| test, 5 seeds | LightGBM | neural net |
+|---|---|---|
+| ROC-AUC mean +- std | 0.9053 +- 0.0023 | 0.8754 +- 0.0034 |
+| drop from Phase 4 validation | 0.0207 | 0.0120 |
+| PR-AUC mean +- std | 0.5362 +- 0.0041 | 0.4377 +- 0.0145 |
+| raw ECE per seed (min-max) | 0.0067-0.0080 | 0.0037-0.0078 |
+| ECE raw -> calibrated (mean) | 0.0073 -> 0.0047 | 0.0057 -> 0.0046 |
+| Brier raw -> calibrated (mean) | 0.02258 -> 0.02260 | 0.02556 -> 0.02547 |
+| savings at C = $10: calibrated / raw / threshold / top 1% | $283k / $284k / $239k / $52k | $269k / $268k / $211k / $53k |
+| dollar recall at C = $10, calibrated rule | 0.812 | 0.788 |
+
+Paired day bootstrap (1,000 draws of 30 days): ROC-AUC gap LightGBM - network 0.0245 to 0.0350; PR-AUC gap 0.077 to 0.118; no draw had the network ahead. Test fraud rate 3.51% (validation 3.66%, train 3.42%); test median amount $68.50, mean $137.29.
+
+**Verdicts (rules fixed above):**
+- (a) Predicted LightGBM. Result: **about the same** (seed ranges overlap; the network's mean raw ECE is in fact lower). Prediction wrong. Note: the reason given was about ranking (Phase 4 ROC-AUC), and ranking well does not imply honest percentages; that is this phase's main lesson.
+- (b) Predicted a drop of 0.01-0.03. Result: LightGBM 0.0207, network 0.0120; both in the band. **Prediction right.**
+- (c) Predicted 40-60% of fraud dollars. Result: **81.2%**. Prediction wrong (one band above "60-80%").
+
+**What the results say (reported, not re-tuned):**
+- Using the amount is what pays: both amount-aware rules beat the amount-blind threshold at every C (at $10, $283k vs $239k for LightGBM).
+- Calibration barely changed the money. Raw scores were already close to honest (ECE under 0.01), so the calibrated and raw rules saved almost the same ($283,448 vs $283,508 at $10). Calibration only helped clearly at C = $50 (LightGBM $155k vs $142k).
+- The calibrators, fitted on validation, transferred only partly. On test LightGBM's isotonic calibrator cut ECE (0.0073 -> 0.0047) but left Brier no better (0.02258 -> 0.02260). It now slightly over-predicts in the riskiest tenth (says 28%, real 25%). Validation had a higher fraud rate (3.66% vs 3.51%), which fits this.
+- LightGBM stays ahead on ranking (bootstrap gap clearly above 0). In dollars at C = $10 it saves about $15k more than the network, but the two models' savings ranges overlap heavily. A paired savings difference was not computed, so the dollar gap is not established.
+- Top 1% (25-30 flags per day) is very precise (0.74-0.90) but catches only about 13% of fraud dollars. At C <= $2, flagging everything saves more than top 1%. The money-optimal rules want about 280 reviews per day; whether a team can do that is outside the data.
+- The PR-AUC gap widened on test (validation 0.061, test 0.098); the network's PR-AUC also varies more across seeds (std 0.0145).
