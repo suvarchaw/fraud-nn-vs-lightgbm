@@ -92,7 +92,7 @@ For each phase, write:
 3. Otherwise "gap stayed".
 `python -m src.compare report` prints which one applies.
 
-**Explain-back:**
+**Explain-back:** "we retrained on fresh seeds to give both neural network and lightgbm an equal chance and phase 3 was just first guesses. gap stayed means that earlier the gab was about 0.04 bw lgbm and nn so after phase 4 also they improved the same little amount which means that gap of 0.04 still stayed. the scores are slightly optimistic so 5 seed doesnt tell us the actual number bcs we havent looked at the test set" (To fix next time: equal tuning gave the equal chance; fresh seeds remove the winner's curse, since the best trial won partly because seed 42 suited it, and both winners did drop on new seeds. "Gap stayed" was right; under the rule, the network's best seed is still below LightGBM's worst. The main thing the spread misses: all seeds share one time split and one validation month, so it cannot show whether another month would reorder the models. Optimism from tuning on validation is true, but it is a separate caveat.)
 
 **Result (validation, 5 fresh seeds each):**
 | | LightGBM | neural net |
