@@ -13,3 +13,8 @@ pytest-timeout==2.4.0
 lightgbm==4.7.0
 scikit-learn==1.9.1
 torch==2.14.1
+# Phase 7 (scoring service; the image uses requirements-service.txt)
+fastapi==0.143.0
+uvicorn==0.54.0
+pydantic==2.14.0
+httpx==0.28.1
