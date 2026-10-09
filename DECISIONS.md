@@ -462,3 +462,11 @@ A read-only review that tried to break the claims above. No model, threshold, te
 - Labels trickle in and some never arrive, and this dataset's labels spread from a chargeback to the client's later payments; one fixed D is a simplification.
 - C = $10 is assumed; no review-capacity limit; day-bootstrap ranges ignore clients spanning days; 84 days is one quarter.
 - Seed k is reused at every retrain, so the seed spread is not independent across models. The client key is approximate. Pooled AUC mixes scores from different models across blocks.
+
+**Amendment to the Phase 8 pre-registration (2026-10-09, before any run; no code written yet):**
+- Prediction (a) was "neither": retraining every 4 weeks pays for neither model at D = 30. It is scored per model on that cell (every 4 weeks vs never, D = 30), in this order:
+  1. **Confirmed** if the gain's 95% range is wholly below 0, or the mean gain is within +-$1,000.
+  2. **Wrong** if retraining pays by the rule above (mean > 0, range excludes 0) and the mean gain is above $1,000.
+  3. Otherwise (range includes 0, mean gain beyond +-$1,000) **not confirmed either way**. A "cannot tell" result is never scored as correct.
+- Read literally, the $1,000 band takes precedence. A mean gain of $1,000 or less is scored "confirmed" even if its range lies above 0. In that case the "retraining pays" verdict for the cell is still reported as "pays", next to the prediction score.
+- Overall (a): confirmed if both models are confirmed; wrong if either model is wrong; otherwise not confirmed either way.
