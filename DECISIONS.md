@@ -359,3 +359,52 @@ A read-only review that tried to break the claims above. No model, threshold, te
 **A10. The lock covers Phase 5 only.** `business.score` refuses test rows outside the locked run. Phase 6 (`weekly`, `psi`, `adversarial`, `retrain`) reads test rows and labels without that check. That is by design once the test set is spent, but the accurate claim is "test labels were used once to judge the frozen models; Phase 6 re-reads them descriptively".
 
 **A13. "Drift mostly in unused columns" means low-gain columns.** The drifting columns are rarely used by LightGBM, not unused. PSI and adversarial validation only see changes in the columns themselves, not in how the columns relate to fraud, and only the latter lowers ROC-AUC directly.
+
+## Phase 7: serving the frozen model (FastAPI + Docker)
+
+**Predictions (before running, 2026-10-09):** (a) p95 single-request latency 10-50 ms; (b) image size 500 MB-1 GB.
+
+**Explain-back:**
+
+**Break-it exercise:** not asked for this phase.
+
+**Decisions (Phase 7):**
+- Serve exactly one model: Phase 5 LightGBM seed 1 plus its Phase 5 isotonic calibrator, byte-identical to the evaluated files (sha256 of the model and of the calibrator are in `spec.json` and checked at startup). Seed 1 is fixed by the rule "the first Phase 5 seed", not by scores.
+- No refit for v1. The frozen model is the only one with test numbers; any refit is a new, unevaluated model. A refit on train+validation would have no honest score left, and a retraining policy chosen from the Phase 6 table would be test-informed (audit A5). No ensemble either: an ensemble was never evaluated. A2 does not apply (no refit, no stopping rule).
+- Skew control: `src/export.py` writes the feature list and column order (`feature_names`), and the category levels (from the model file's own `pandas_categorical`, asserted equal to `load_raw()` levels). Nothing is retyped. One function builds the feature table for single and batch requests: float32 numbers, categories with the training levels.
+- Unseen label -> missing, because that is what LightGBM did in training and evaluation (tested against offline with the label set missing and with an added unseen category).
+- Request fields are created from `spec.json`, all optional except `TransactionAmt`. The amount in p x amount is that same field, so a request cannot carry two amounts that disagree.
+- Strict types: numbers must be JSON numbers (no "12" strings, no booleans, no NaN/inf); labels are strings up to 100 characters.
+- Batch limit 500 rows, body limit 8 MB, both 413; empty batch 422. A POST without Content-Length is refused (411) so the size limit cannot be bypassed by chunked bodies.
+- C: environment variable `REVIEW_COST`, default $10, overridable per request. Stated as assumed in the API docs and `/model-info`. Equal to C is not flagged (strict `>`, as in Phase 5).
+- Scoring uses `num_threads=1`: predictions are per row, so the thread count cannot change a score, and a single small request does not pay for thread start-up.
+- The calibrator maths (`np.interp`) is copied into the service instead of importing `src.business`, which pulls in the training code. A test checks the copy equals `business.calibrate` on a grid.
+- The service imports nothing from `src/` and no PyTorch (a test imports it in a fresh process and checks). Neither `service/` nor `src/export.py` names the test block (a test checks the text).
+- Validation errors return field path and error type only; the log has request number, route, status, latency and score only (tested with distinctive made-up values).
+- Image: `python:3.12-slim` + `libgomp1`, `requirements-service.txt` (exact pins; lightgbm, numpy, pandas, scipy as in `requirements.txt`), non-root user, model mounted at `/models` read-only, `.dockerignore` excludes everything except `service/` and the requirements file. Not pushed anywhere. `requirements.txt` gained fastapi, uvicorn, pydantic, httpx (tests).
+- The test file is named `tests/test_lgbm_service.py` so pytest runs it after `test_lgbm` and before `test_nn` (the LightGBM / PyTorch order rule).
+- Docker's command was not on PATH (Docker Desktop is installed but its `docker` lives in `/Applications/Docker.app/Contents/Resources/bin`); the smoke script adds it for its own run.
+
+**Result (2026-10-09, this laptop):**
+- Parity: 2,000 validation rows through `/score_batch` and 50 through `/score` equal the offline calibrated scores to under 1e-9, and equal the scores Phase 5 saved after training.
+- Image size: **649 MB** (Docker's figure for the disk size).
+- Smoke run (real): build, run with mounted model, `/health` ok, `/score` returned a calibrated probability, logs held no payload values, stopped.
+- Latency, loopback on this Mac, one worker, 1,000 requests after a 50-request warm-up, two runs (ms, p50 / p95 / max):
+
+| case | run 1 | run 2 |
+|---|---|---|
+| single, 6 fields | 19.4 / 62.2 / 590 | 15.3 / 21.5 / 81 |
+| single, all 431 fields | 18.8 / 25.1 / 97 | 16.0 / 25.5 / 158 |
+| batch of 10, 431 fields each | 22.2 / 52.5 / 293 | 19.9 / 35.3 / 158 |
+
+  These are local-machine numbers, not production numbers. They moved a lot between runs (the 6-field p95 was 62 ms, then 22 ms), so only the order of magnitude is meaningful.
+
+**Verdicts on the predictions:** (a) 10-50 ms: p95 was 21-26 ms in five of six single-request cells and 62 ms in one, so **right on the whole, not on every run**. (b) 500 MB-1 GB: 649 MB, **right**.
+
+**What could make the deployment story misleading:**
+- The test numbers come from one 30-day window with an assumed C = $10.
+- Card memory (audit A1): the edge needs fraud labels of earlier payments from the same card; the service has no label feed or card history, and real chargebacks arrive weeks late.
+- The model is frozen (Phase 6): scores fell 0.02-0.04 ROC-AUC after training, and nothing here retrains or monitors.
+- Parity shows the service equals the offline code on validation rows, not that production inputs look like these anonymised columns.
+- Latency and image size are for this laptop and this base image.
+- "Flag" is the cost rule only: no customer-friction cost, no review capacity (the measured operating point was about 280 flags per day).
