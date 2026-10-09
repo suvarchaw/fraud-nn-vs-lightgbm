@@ -399,6 +399,18 @@ A read-only review that tried to break the claims above. No model, threshold, te
 
   These are local-machine numbers, not production numbers. They moved a lot between runs (the 6-field p95 was 62 ms, then 22 ms), so only the order of magnitude is meaningful.
 
+- Where the time goes (`scripts/latency.py`, same three steps run in-process, 1,000 repeats after warm-up, ms p50 / p95; a third run of the script, so single-request totals differ slightly from the table above):
+
+| case | request validation | frame build | model call + calibration |
+|---|---|---|---|
+| single, 6 fields | 0.03 / 0.07 | 6.2 / 7.0 | 7.8 / 8.8 |
+| single, 431 fields | 0.10 / 0.14 | 7.3 / 8.4 | 7.2 / 8.3 |
+| batch of 10, 431 fields each | 0.63 / 0.75 | 7.7 / 8.4 | 7.2 / 8.2 |
+
+  Validation is negligible. Frame build (making a 431-column table) and the model call (which includes LightGBM converting that table) cost about 7 ms each, almost regardless of rows, so latency is dominated by per-request fixed cost, not by trees or rows. The rest of the single-request time (about 1-2 ms) is HTTP and thread hand-off. A faster path would build a plain array instead of a DataFrame; not done, because the DataFrame path is the one the parity test proves and category handling goes through it.
+- Float32 guard: `src/export.py` asserts every integer feature column has max absolute value below 2**24 (float32 holds such integers exactly). Only `card1` is an integer column (max 18,396). The check reads the whole file's column bound, not test rows' labels or scores.
+- Unknown vs known-but-never-trained label: a label outside the model's category list is turned into missing; a label inside the list (built from the whole file) that has no training rows goes to LightGBM unchanged and each split's own category rule decides. The parity test covers validation rows plus one constructed unseen-label row, so the second case is not tested for every label.
+
 **Verdicts on the predictions:** (a) 10-50 ms: p95 was 21-26 ms in five of six single-request cells and 62 ms in one, so **right on the whole, not on every run**. (b) 500 MB-1 GB: 649 MB, **right**.
 
 **What could make the deployment story misleading:**

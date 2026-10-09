@@ -38,7 +38,11 @@ curl -s -X POST localhost:8000/score -H 'content-type: application/json' \
  "model_version": "lgbm-phase5-seed1-calibrated", "model_sha256": "b5827c33...6f7ceb"}
 ```
 Feature names are the dataset's column names (`GET /openapi.json` lists all 431). A label the model never saw in
-training is treated as missing, exactly as LightGBM treated it.
+training is treated as missing, exactly as LightGBM treated it. That is not the same as a label that is in the
+model's category list but never appeared in the training rows (the list was built from the whole file): that label is
+sent to LightGBM as it is, and each split applies its own rule for categories outside its set, which can take a
+different path from "missing". The parity test covers validation rows only, so it checks the first case on one
+constructed row and does not check how every such label is scored.
 
 ## Privacy
 Request payloads, query strings and feature values are never logged. One line per request:

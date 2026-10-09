@@ -46,3 +46,32 @@ try:
             print(f"{name:32}{np.percentile(ms, 50):9.1f}{np.percentile(ms, 95):9.1f}{max(ms):9.1f}")
 finally:
     server.terminate()
+
+# ---- where the time goes: the same three steps the service runs, timed in this process (no HTTP) ----
+import lightgbm as lgb
+from pydantic import TypeAdapter
+
+sys.path.insert(0, str(ROOT))
+from service.app import build_frame, calibrate, request_model
+
+booster = lgb.Booster(model_file=str(ROOT / "models" / "service" / "model.txt"))
+Tx = request_model(spec)
+print(f"\n{'in-process step (ms)':44}{'p50':>8}{'p95':>8}")
+for name, body in (("6 fields", sparse), ("431 fields", wide), ("batch of 10 x 431 fields", [wide] * 10)):
+    data = json.dumps(body)
+    parse = TypeAdapter(list[Tx]).validate_json if isinstance(body, list) else Tx.model_validate_json
+    steps = {"request validation": [], "frame build": [], "model call + calibration": []}
+    for i in range(WARM + N):
+        t0 = time.perf_counter()
+        rows = parse(data)
+        rows = rows if isinstance(rows, list) else [rows]
+        t1 = time.perf_counter()
+        frame = build_frame(spec, rows)
+        t2 = time.perf_counter()
+        calibrate(booster.predict(frame, num_threads=1), spec["calibrator"])
+        t3 = time.perf_counter()
+        if i >= WARM:
+            for k, (a, b) in zip(steps, ((t0, t1), (t1, t2), (t2, t3))):
+                steps[k].append(1000 * (b - a))
+    for k, v in steps.items():
+        print(f"{name + ': ' + k:44}{np.percentile(v, 50):8.2f}{np.percentile(v, 95):8.2f}")

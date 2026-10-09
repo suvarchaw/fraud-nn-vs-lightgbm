@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import lightgbm as lgb
+import pandas as pd
 
 from src.lgbm import feature_names
 from src.split import BOUNDS, DT_START
@@ -45,6 +46,11 @@ def build(df, out_dir=None):
     booster = lgb.Booster(model_file=str(model_file))
     feats = feature_names(df)
     assert booster.feature_name() == feats, "model feature order differs from the training code's feature list"
+
+    # The service holds every number as float32, which is exact for integers up to 2**24.
+    for c in feats:
+        if pd.api.types.is_integer_dtype(df[c]):
+            assert int(df[c].abs().max()) < 2**24, f"integer column {c} is not exact in float32"
 
     cat_cols = [c for c in feats if str(df[c].dtype) == "category"]
     levels = dict(zip(cat_cols, booster.pandas_categorical))
