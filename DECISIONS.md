@@ -120,3 +120,39 @@ Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.038
 - `subsample_freq=1` is always passed: LightGBM silently ignores `subsample` without it, and with subsample 1.0 it changes nothing (trial 1 reproduced 0.9189 exactly; the network's trial 1 reproduced 0.8788).
 - Each model trains in its own process; files pass results along, and `report` imports neither library and refuses to compare unless trial counts, train/validation row fingerprints and seeds match.
 - New finding: the clash also runs the other way. If PyTorch's thread pool starts first in a process, LightGBM training then crashes (segmentation fault). So each model's training tests live in that model's own test file, which pytest runs in the safe order (test_lgbm before test_nn); test_compare.py trains nothing. The suite now takes ~2 min.
+
+## Phase 5: cost, threshold, calibration, and the one test run
+
+**Predictions (before running):**
+- (a) Better calibrated raw: LightGBM. Reason given: "in the past phases lightgbm worst score was better than nn's best".
+- (b) Test ROC-AUC falls 0.01-0.03 below validation.
+- (c) The headline catches 40-60% of test fraud dollars.
+
+**Verdict rules (fixed before any run):**
+- (a) Raw (uncalibrated) test ECE, 5 seeds each. A model wins only if its worst seed is better than the other model's best seed; otherwise "about the same".
+- (b) Drop = Phase 4 mean val ROC-AUC - mean test ROC-AUC (5 seeds). Right only if BOTH models' drops fall in the predicted band.
+- (c) Headline dollar recall on test, against the predicted band.
+
+**Headline (fixed before any run):** LightGBM + calibrated rule at C = $10, mean over 5 seeds. Prediction (c) refers to this only. Every other model / rule / C is reported alongside, never quoted as the result.
+
+**Test-set rules (fixed before any run):**
+- The test set is evaluated exactly once, in one run (`python -m src.business test`), with the frozen Phase 4 configs (LightGBM trial 13, network trial 8), retrained on seeds 1-5 on train only, early stopping on validation as before.
+- Every calibrator, threshold and cut-off is chosen from validation only, saved, and fingerprinted (sha256) before any test score exists. The test run refuses to start, and refuses to apply them, if the fingerprint changed.
+- A second test run is refused unless `--override "reason"` is passed; the code then appends a dated line to this file.
+- **Crash policy:** an override is allowed only if the run crashed before producing any result. The override line must say so in its reason.
+- If something looks wrong after seeing test results, we report it; we do not re-tune.
+- A rehearsal (`test --rehearsal`) must pass first: the same pipeline on validation rows, writing no lock and no test metrics.
+
+**Decisions (Phase 5):**
+- Cost model: a missed fraud costs its TransactionAmt; every flag costs C (a caught fraud costs C, not its amount); a legit payment left alone costs 0. A caught fraud is assumed fully saved.
+- C is an assumption, swept over $1, $2, $5, $10, $20, $50 (a quick check up to a long investigation).
+- Three rules, all frozen on validation: calibrated (flag if calibrated p x amount > C; nothing tuned), raw (the same formula on the uncalibrated score, as a control), threshold (one score cut-off per C that minimised validation cost; ignores amount). Baselines: flag nothing, flag everything, top 1% (cut-off = 99th percentile of validation scores, applied unchanged to test).
+- Platt vs isotonic, one rule for both models: fit both on the first half of validation days, Brier on the second half; isotonic only if lower by more than 0.0001 (Platt is simpler and cannot overfit). The winner is refitted on all of validation. One calibrator and one set of thresholds per seed, so every money number has a seed spread.
+- Validation now did four jobs (settings, stopping point, calibrators, thresholds), so validation money numbers are flattering. Only the test numbers are quoted as results.
+- ECE uses 10 equal-count groups. Equal-width groups would put almost every payment in the lowest group because fraud is rare.
+- ROC-AUC and PR-AUC are computed on raw scores; calibration does not change the order (Platt) or barely does (isotonic).
+- Paired bootstrap: 1,000 draws of whole test days (seed 0); both models scored on the same draws; AUC averaged over the 5 seeds inside each draw. The same draws give a range for savings at C = $10. Not covered: only ~30 days; a card can span days; a different month; label delay; a different search seed or feature set.
+- Test amount statistics are computed only inside the test run, after freezing; `choose` reports train and validation amounts only.
+- Fit check: every retrained seed must reproduce its Phase 4 validation ROC-AUC exactly, or `fit` stops. The rehearsal also checks that the saved model files reproduce the validation scores made right after training.
+- Per-row scores, model files and calibrators (isotonic steps are raw score values) stay in git-ignored `models/phase5/`; `metrics/` holds aggregates only.
+- pytest-timeout: every test fails after 10 minutes instead of hanging (e.g. the LightGBM / PyTorch thread clash).

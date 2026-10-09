@@ -73,6 +73,12 @@ def sample_configs(model, n=N_TRIALS):
     return [dict(BASELINE[model])] + [{k: _draw(rng, s) for k, s in SPACE[model].items()} for _ in range(n - 1)]
 
 
+def nn_knobs(cfg):
+    """Search-space config -> the knobs nn.train takes."""
+    return {"hidden": tuple(cfg["width"] // 2 ** i for i in range(cfg["layers"])),  # each layer half the last
+            **{k: cfg[k] for k in ("dropout", "lr", "batch", "weight_decay")}}
+
+
 def run(model, df, cfg, seed, data=None, **caps):
     """Train one model on train rows, early-stop and score on validation.
 
@@ -86,9 +92,7 @@ def run(model, df, cfg, seed, data=None, **caps):
                 "stop_at": int(m.best_iteration_), "hit_cap": bool(m.best_iteration_ > cap - lgbm.PATIENCE),
                 "seconds": round(time.time() - t, 1)}
     from src import nn
-    knobs = {"hidden": tuple(cfg["width"] // 2 ** i for i in range(cfg["layers"])),  # each layer half the last
-             **{k: cfg[k] for k in ("dropout", "lr", "batch", "weight_decay")}}
-    info = nn.train(df, seed, cfg=knobs, data=data, verbose=False, **caps)[2]
+    info = nn.train(df, seed, cfg=nn_knobs(cfg), data=data, verbose=False, **caps)[2]
     cap = caps.get("max_epochs", nn.MAX_EPOCHS)
     return {"val": info["val"], "stop_at": info["best_epoch"],
             "hit_cap": info["best_epoch"] > cap - nn.PATIENCE, "seconds": info["train_seconds"]}
