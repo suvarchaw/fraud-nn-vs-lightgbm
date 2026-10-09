@@ -41,19 +41,20 @@ def prepared(df):
 
 @pytest.fixture(scope="session")
 def scrambled(df):
-    """Copy of df with every test-block row scrambled: features, labels and 5 category columns get a new label.
-    A Phase 4 trial must score exactly the same on it, proving nothing reads test rows."""
+    """Copy of df with every test-block AND gap row scrambled: features, labels and 5 category columns get a new label.
+    A Phase 4 trial or Phase 5 choice must come out exactly the same on it, proving nothing reads those rows."""
     from src.lgbm import feature_names
     from src.split import split_by_time
-    _, _, test = split_by_time(df)
+    tr, val, _ = split_by_time(df)
+    out = df.drop(tr.index.union(val.index))  # test block plus both gaps
     d = df.copy()
     feats = feature_names(df)
     cat = [c for c in feats if str(d[c].dtype) == "category"]
     for c in feats:
         if c in cat[:5]:
             d[c] = d[c].cat.add_categories(["never-seen.example"])
-            d.loc[test.index, c] = "never-seen.example"
+            d.loc[out.index, c] = "never-seen.example"
         elif c not in cat:
-            d.loc[test.index, c] = d.loc[test.index, c] * -7 + 3
-    d.loc[test.index, "isFraud"] = 1 - d.loc[test.index, "isFraud"]
+            d.loc[out.index, c] = d.loc[out.index, c] * -7 + 3
+    d.loc[out.index, "isFraud"] = 1 - d.loc[out.index, "isFraud"]
     return d
