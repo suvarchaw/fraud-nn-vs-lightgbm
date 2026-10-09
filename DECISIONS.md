@@ -14,7 +14,7 @@ For each phase, write:
 - Left join, not inner: not every transaction has identity data, and having identity is itself a signal (fraud 7.8% with vs 2.1% without).
 - Parquet cache skipped; add only if CSV load time becomes a nuisance.
 - Notebook shows aggregates only: outputs are saved in the file and the data is not redistributable.
-- Phase 1 cut points are chosen by fixed fractions of the time range, never by looking at where fraud is higher or lower in the held-out period.
+- Phase 1 cut points are chosen by fixed fractions of the time range, never by looking at where fraud is higher or lower in the held-out period. (Disclosure, audit A6: the EDA notebook printed the weekly fraud rate for every week, test weeks included, before the cut points were set.)
 
 ## Phase 1: time-based split
 
@@ -48,7 +48,7 @@ For each phase, write:
 **Decisions (Phase 2):**
 - Excluded isFraud (the answer), TransactionID (a row counter that proxies for time and memorizes rows) and TransactionDT (validation is later than all training times, so trees cannot extrapolate calendar position; time effects are Phase 6's job).
 - Category columns go straight into LightGBM; no encoding, scaling or resampling. The category label lists come from the whole file (names only, no fitted statistics); LightGBM records the train categories itself.
-- Early stopping on validation ROC-AUC, patience 100, best round kept, max 2000 trees, learning rate 0.05. The validation score is slightly optimistic because validation chose the tree count; the test set stays honest.
+- Early stopping on validation ROC-AUC, patience 100, best round kept, max 2000 trees, learning rate 0.05. The validation score is optimistic, by an amount not measured here (audit A4), because validation chose the tree count; the test set stays honest.
 - Stopping metric and rule used here (validation ROC-AUC, patience 100, best round kept) must be reused for the neural net in Phase 3 so the comparison is fair. They are named constants in `src/lgbm.py`.
 - Baseline is untuned (defaults + learning rate and tree cap). Phase 4 gives both models equal tuning effort on validation, or states plainly that the baseline is untuned.
 - Determinism: seed 42 plus deterministic=True, force_row_wise=True and a fixed 4 threads (the thread count must stay fixed for repeatable results). Checked by a test.
@@ -106,7 +106,7 @@ For each phase, write:
 Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.0387 (untuned: 0.0401), PR-AUC 0.0609 (untuned: 0.0575). The ROC-AUC gap is about 11 times the larger seed spread, and the network's best seed is below LightGBM's worst. Tuning helped both by a similar amount (ROC-AUC +0.0071 LightGBM, +0.0086 network). Your prediction (gap stays) was right. Total run time 41 min.
 
 **Decisions (Phase 4):**
-- Validation is used for BOTH tuning (choosing the settings) and early stopping (choosing the tree/epoch count). Both validation scores are therefore slightly optimistic, for both models. The untouched test set gives the honest number in the final report.
+- Validation is used for BOTH tuning (choosing the settings) and early stopping (choosing the tree/epoch count). Both validation scores are therefore optimistic, for both models, by an amount not measured here (audit A4). The untouched test set gives the honest number in the final report.
 - Random search for both: the same simple method, no new library, and no trial depends on earlier scores, so neither model benefits from a smarter search adapting to it.
 - 20 trials per model: trial 1 is the exact Phase 2/3 config, 19 are random draws. 19 random trials give about a 62% chance (1 - 0.95^19) of landing in the best 5% of the space. One fixed search seed (0).
 - 6 knobs each, learning rate tuned for both. Ranges centred on library defaults / Phase 2-3 values (reasons in the Phase 4 plan and `src/compare.py`).
@@ -166,7 +166,7 @@ Verdict (rule above): **gap stayed**. Mean gap LightGBM - network: ROC-AUC 0.038
 
 **Result (test set, one run 2026-10-09, run 47c03d89; 5 seeds each; C is an assumption):**
 
-Headline (fixed in advance): LightGBM + calibrated rule at C = $10 saves **$283,448** of $451,813 test fraud dollars (62.7%, net of review cost), seed spread +- $2,750, day-bootstrap 95% range $241k-$329k. It catches **81.2% of fraud dollars** and 58.7% of fraud payments, with 278 flags per day at precision 0.208 (about 1 in 5 flags is fraud).
+Headline (fixed in advance): LightGBM + calibrated rule at C = $10 saves **$283,448** of $451,813 test fraud dollars (62.7%, net of review cost), seed spread +- $2,750, day-bootstrap 95% range $241k-$329k. It catches **81.2% of fraud dollars** and 58.7% of fraud payments, with 278 flags per day at precision 0.208 (about 1 in 5 flags is fraud). The 81.2% belongs to this operating point, not to the model (audit A7).
 
 | test, 5 seeds | LightGBM | neural net |
 |---|---|---|
@@ -188,7 +188,7 @@ Paired day bootstrap (1,000 draws of 30 days): ROC-AUC gap LightGBM - network 0.
 
 **What the results say (reported, not re-tuned):**
 - Using the amount is what pays: both amount-aware rules beat the amount-blind threshold at every C (at $10, $283k vs $239k for LightGBM).
-- Calibration barely changed the money. Raw scores were already close to honest (ECE under 0.01), so the calibrated and raw rules saved almost the same ($283,448 vs $283,508 at $10). Calibration only helped clearly at C = $50 (LightGBM $155k vs $142k).
+- Calibration barely changed the money. Raw scores were already fairly close (ECE under 0.01; against a 3.5% fraud rate that is still about a 20% relative error, audit A7), so the calibrated and raw rules saved almost the same ($283,448 vs $283,508 at $10). Calibration only helped clearly at C = $50 (LightGBM $155k vs $142k).
 - The calibrators, fitted on validation, transferred only partly. On test LightGBM's isotonic calibrator cut ECE (0.0073 -> 0.0047) but left Brier no better (0.02258 -> 0.02260). It now slightly over-predicts in the riskiest tenth (says 28%, real 25%). Validation had a higher fraud rate (3.66% vs 3.51%), which fits this.
 - LightGBM stays ahead on ranking (bootstrap gap clearly above 0). In dollars at C = $10 it saves about $15k more than the network, but the two models' savings ranges overlap heavily. A paired savings difference was not computed, so the dollar gap is not established.
 - Top 1% (25-30 flags per day) is very precise (0.74-0.90) but catches only about 13% of fraud dollars. At C <= $2, flagging everything saves more than top 1%. The money-optimal rules want about 280 reviews per day; whether a team can do that is outside the data.
@@ -196,7 +196,7 @@ Paired day bootstrap (1,000 draws of 30 days): ROC-AUC gap LightGBM - network 0.
 
 ## Phase 6: drift (descriptive only)
 
-**Status of this phase:** the models are frozen (Phase 4 configs, seeds 1-5, trained on train only, files in `models/phase5/`), and the test set was spent in Phase 5. Nothing in this phase changes a model, a threshold or a config, and nothing here is used to choose between models. Every finding is descriptive, or a hypothesis to check on a future month.
+**Status of this phase:** the models are frozen (Phase 4 configs, seeds 1-5, trained on train only, files in `models/phase5/`), and the test set was spent in Phase 5. This phase re-reads test rows and labels descriptively; the Phase 5 lock guards only Phase 5 scoring (audit A10). Nothing in this phase changes a model, a threshold or a config, and nothing here is used to choose between models. Every finding is descriptive, or a hypothesis to check on a future month.
 
 **Predictions (before running, 2026-10-09, no reasons given):**
 - (a) Weekly ROC-AUC over weeks 17-25: **stays flat**.
@@ -301,7 +301,7 @@ Retraining exercise (exploratory, LightGBM, ROC-AUC mean +- std over 5 seeds):
 *Caption: Exploratory. Tree counts and config were tuned for a 109-day window, so the 45-day trailing window is handicapped (a bias against recency); nothing was re-tuned to fix it. Every month here was seen in earlier phases.*
 
 How to read the retraining table:
-- **Staleness.** Read the same target month (days 150-180) down the diagonal. Models whose data ended at day 143, 113 and 83 score 0.925 / 0.909 / 0.891 (expanding) and 0.917 / 0.900 / 0.878 (trailing, same 45-day size each time). So two months of extra age cost about 0.03-0.04 ROC-AUC.
+- **Staleness.** Read the same target month (days 150-180) down the diagonal. Models whose data ended before day 143, 113 and 83 (last day 142, 112, 82) score 0.925 / 0.909 / 0.891 (expanding) and 0.917 / 0.900 / 0.878 (trailing, same 45-day size each time). Fresher models scored higher on the same month, but age is not isolated: model age, amount of data and which days are in the window change together (audit A5).
 - **Recency vs amount of data.** Expanding beat trailing in every cell (by 0.007-0.016). Keeping older data helped, under the handicap stated in the caption.
 
 **Verdicts on the predictions (rules fixed above):**
@@ -310,12 +310,50 @@ How to read the retraining table:
 - (c) Predicted adversarial AUC 0.6-0.8. Result: **0.893** (over 0.8). **Wrong.**
 
 **What the results say (descriptive; hypotheses for a future month, not conclusions):**
-- Both frozen models lose ranking quality after training ends. LightGBM falls about twice as fast per week, but stays ahead of the net in every out-of-sample week.
+- Both frozen models lose ranking quality after training ends (for the net, the post-gap fall rests on week 17, audit A3). LightGBM falls about twice as fast per week, but stays ahead of the net in every out-of-sample week.
 - **H1 holding does not establish drift.** The separator is inconclusive by the pre-set rule, for two reasons:
   - Against pure optimism: there is a downward trend inside the validation weeks.
   - Against a smooth drift line: gap2 (never used) sits below both validation and test, a dip rather than a point between them. Weeks 20-21 were hard for both models.
 - Not label delay: the last two weeks are not where the fall is. Without them the slope is steeper.
-- Hypothesis: "memory fade". LightGBM scores 0.988 in-sample and 0.939 in the week right after training, then settles near 0.90. Its top columns include card and address identifiers (card1, card2, addr1). A model that partly remembers recently active cards would lose that edge as cards turn over, faster for the model that memorises more. This fits the front-loaded fall, the faster LightGBM slope, and fresher retrains doing better. It is not tested here.
-- Column drift is large and easy to detect, but it is mostly in columns the fraud model barely uses (browser version, M flags, missing-data patterns). The months look different (adversarial AUC 0.89), yet the train period also looks different from itself (0.83). "Looks different" is this data's normal state and does not by itself predict the score loss.
+- Hypothesis: "memory fade". LightGBM scores 0.988 in-sample and 0.939 in the week right after training, then settles near 0.90. Its top columns include card and address identifiers (card1, card2, addr1). A model that partly remembers recently active cards would lose that edge as cards turn over, faster for the model that memorises more. This fits the front-loaded fall, the faster LightGBM slope, and fresher retrains doing better. It is not tested here. (A post-hoc check on validation, audit A1, fits it.)
+- Column drift is large and easy to detect, but it is mostly in columns the fraud model barely uses (browser version, M flags, missing-data patterns). The months look different (adversarial AUC 0.89), yet the train period also looks different from itself (0.83). "Looks different" is this data's normal state and does not by itself predict the score loss. PSI and the adversarial check only see changes in the columns themselves, not in how the columns relate to fraud, and the latter is what lowers ROC-AUC (audit A13).
 - The net also dips inside train (weeks 12-13, about 0.88 in-sample) while LightGBM does not. Some fraud patterns there are hard for the net even on rows it trained on.
 - PR-AUC fell more than ROC-AUC (LightGBM about 0.9 in-sample, about 0.5 on test). It also moves with the weekly fraud rate (2.1%-5.1%), so it is not used for the trend tests.
+
+## Independent audit (2026-10-09, after Phase 6)
+
+A read-only review that tried to break the claims above. No model, threshold, test or test-run file was changed, and nothing was re-scored on the test block. Labels A1-A13 follow the audit's numbering; the inline notes above point here.
+
+**A1. Card memory explains most of LightGBM's lead (post-hoc, descriptive, validation only).**
+- Client key: card1 + addr1 + (day - D1), the usual IEEE-CIS client id. It is approximate (different clients can share a key).
+- 53.7% of validation rows (45,130; 1,769 frauds) come from clients already present in train ("returning"); 46.3% (38,963; 1,306 frauds) are new. 57% of validation fraud rows belong to clients that already had a fraud label in train: their fraud rate is 15.7%, against 0.03% for returning clients with a clean train history and 3.35% for new clients.
+- Validation ROC-AUC (frozen Phase 5 models, mean of 5 seeds), with a paired day-block bootstrap (1,000 draws of whole validation days, seed 0, AUC averaged over the 5 seeds inside each draw, as in Phase 5):
+
+| clients | LightGBM | neural net | gap (95% range) |
+|---|---|---|---|
+| all | 0.9260 | 0.8874 | 0.039 |
+| returning | 0.9575 | 0.9007 | 0.057 (0.048 to 0.066) |
+| new | 0.8751 | 0.8695 | 0.006 (-0.001 to 0.012; 4.9% of draws at or below 0) |
+
+- The returning gap minus the new gap is 0.040 to 0.063, so the difference is not luck of the days drawn.
+- Why: the dataset's hosts described labels as spreading from a chargeback to later linked transactions, and card / address columns let a model recognise those clients again. LightGBM uses them more (card1, card2, addr1 are top-10 gain).
+- What it changes: "LightGBM beats the network by about 0.04 ROC-AUC" holds overall, but on new clients the two are within about 0.006 on validation. Test ROC-AUC overstates what a new client would see.
+- This edge assumes the train labels are known by the time the validation payments arrive, i.e. within the 7-day gap. Real chargebacks take weeks to months, so in practice the card-memory edge (and LightGBM's lead) would be smaller.
+- Not checked on the test block (spent). Validation chose both models' settings and stopping points, which affects both equally but means these numbers are not held-out.
+- Side check: a plain blocklist (flag every validation payment of a client with a train fraud) catches 34.7% of validation fraud dollars at precision 0.157, saving $65k at C = $10. So the money result is not just a blocklist.
+
+**A3. For the net, "falls after training" rests on week 17 (post-hoc point estimates).** Straight-line slope of weekly ROC-AUC (`metrics/phase6_weekly.json`, `np.polyfit`): weeks 17-25 LightGBM -0.0041, net -0.0020 (as pre-registered); weeks 18-25 LightGBM -0.0024, net -0.0001. Week 17 is the first validation week: closest to train (card memory, A1) and used for tuning and stopping. Within the test weeks both slopes are flat or rising. Safer wording: both models are about 0.02-0.04 ROC-AUC lower than in the weeks right after training, mostly early, then flat across the test month; not "a steady decay".
+
+**A4. "Slightly optimistic" validation was not measured.** The only optimism actually measured is the seed winner's curse (0.0013 LightGBM, 0.0032 net). gap2, never used and right after validation, scored 0.031 (LightGBM) and 0.044 (net) below validation; test scored 0.021 and 0.012 below. gap2 has only 602 frauds, so its range is wide (step val - gap2: 0.010 to 0.056 and 0.028 to 0.063), and drift plays a part. The size of the optimism is unknown, not "slight".
+
+**A5. Retraining table: causes are mixed, and the target month is the test block.** On the expanding diagonal the amount of training data also changes (143 / 113 / 83 days); on the trailing diagonal the window content changes (days 38-82 overlap the early-train period with a different product mix). So the table shows "fresher scored higher", not the cost of age alone. The target month, days 150-180, is the Phase 5 test block, re-scored here by 30 new models (`drift retrain` does not check the lock). Choosing a retraining policy for Phase 7 from this table would be a test-informed decision.
+
+**A6. Aggregate test labels were visible before the split was fixed.** The Phase 0 notebook (2026-10-02) printed the weekly fraud rate for every week, test weeks included, three days before the cut points were set, and `python -m src.split` prints the test row count and fraud rate. Nothing suggests a choice depended on it (60% / 80% are conventional fractions), but the accurate claim is "the test block was never used for any fit or choice", not "never looked at".
+
+**A7. Framing of the money numbers.** At C = $10 the raw rule saves the same as the calibrated one ($283,508 vs $283,448) with 186 flags per day and 75.1% of fraud dollars, against 278 flags and 81.2%. On test the calibrator over-predicts the riskiest tenth (28% vs 24.8%), which adds flags. So 81.2% describes one operating point. About 4 of 5 flags are legitimate payments, and a false flag is costed at C only (no customer-friction cost). ECE under 0.01 is about a 20% relative error against a 3.5% fraud rate. Safe summary: about $283k net savings on one 30-day held-out window, under an assumed $10 review cost, catching 81% of fraud dollars at about 280 reviews per day, 1 in 5 flags being fraud.
+
+**A9. Phase 6 cannot be re-run from a fresh clone.** `drift score` needs the per-row test scores in `models/phase5/` (git-ignored), which only the one locked test run writes; re-creating them needs `--override`, which the crash policy forbids. The sha256 of every file in `models/phase5/` is recorded in the Phase 6 metrics files, so the files used are pinned, but a fresh clone can reproduce Phases 1-5 only.
+
+**A10. The lock covers Phase 5 only.** `business.score` refuses test rows outside the locked run. Phase 6 (`weekly`, `psi`, `adversarial`, `retrain`) reads test rows and labels without that check. That is by design once the test set is spent, but the accurate claim is "test labels were used once to judge the frozen models; Phase 6 re-reads them descriptively".
+
+**A13. "Drift mostly in unused columns" means low-gain columns.** The drifting columns are rarely used by LightGBM, not unused. PSI and adversarial validation only see changes in the columns themselves, not in how the columns relate to fraud, and only the latter lowers ROC-AUC directly.
