@@ -1,0 +1,215 @@
+{
+  "note": "LightGBM only (the net has no gain importance). Any link is a hypothesis, not proof.",
+  "spearman_gain_vs_psi_test": 0.1010847378466282,
+  "spearman_gain_vs_adversarial_gain": 0.568957695165654,
+  "top20_overlap": {
+    "gain_and_psi": [],
+    "gain_and_adversarial": [
+      "C13",
+      "D15"
+    ],
+    "psi_and_adversarial": [
+      "D11",
+      "M7",
+      "M9",
+      "V5",
+      "V8",
+      "id_13",
+      "id_31"
+    ]
+  },
+  "top20_gain_table": [
+    {
+      "feature": "V258",
+      "gain_share": 0.0534,
+      "psi_val": 0.0477,
+      "psi_test": 0.0305,
+      "psi_early_late_train": 0.1394,
+      "adversarial_gain_share": 0.0,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C14",
+      "gain_share": 0.0323,
+      "psi_val": 0.0102,
+      "psi_test": 0.0067,
+      "psi_early_late_train": 0.0145,
+      "adversarial_gain_share": 0.0009,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "card2",
+      "gain_share": 0.029,
+      "psi_val": 0.0097,
+      "psi_test": 0.0078,
+      "psi_early_late_train": 0.0077,
+      "adversarial_gain_share": 0.0026,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C13",
+      "gain_share": 0.0288,
+      "psi_val": 0.0305,
+      "psi_test": 0.0244,
+      "psi_early_late_train": 0.0335,
+      "adversarial_gain_share": 0.0046,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C1",
+      "gain_share": 0.0288,
+      "psi_val": 0.009,
+      "psi_test": 0.0132,
+      "psi_early_late_train": 0.0153,
+      "adversarial_gain_share": 0.0038,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "card1",
+      "gain_share": 0.0277,
+      "psi_val": 0.0008,
+      "psi_test": 0.0045,
+      "psi_early_late_train": 0.0008,
+      "adversarial_gain_share": 0.0013,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "DeviceInfo",
+      "gain_share": 0.0271,
+      "psi_val": 0.0918,
+      "psi_test": 0.0559,
+      "psi_early_late_train": 0.1962,
+      "adversarial_gain_share": 0.0015,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "addr1",
+      "gain_share": 0.0236,
+      "psi_val": 0.0012,
+      "psi_test": 0.0039,
+      "psi_early_late_train": 0.0037,
+      "adversarial_gain_share": 0.0027,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "D2",
+      "gain_share": 0.0234,
+      "psi_val": 0.033,
+      "psi_test": 0.0382,
+      "psi_early_late_train": 0.0284,
+      "adversarial_gain_share": 0.0031,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "TransactionAmt",
+      "gain_share": 0.0215,
+      "psi_val": 0.0095,
+      "psi_test": 0.0055,
+      "psi_early_late_train": 0.0261,
+      "adversarial_gain_share": 0.001,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "V294",
+      "gain_share": 0.0176,
+      "psi_val": 0.0011,
+      "psi_test": 0.0038,
+      "psi_early_late_train": 0.0006,
+      "adversarial_gain_share": 0.0017,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "V257",
+      "gain_share": 0.0175,
+      "psi_val": 0.0478,
+      "psi_test": 0.0297,
+      "psi_early_late_train": 0.1335,
+      "adversarial_gain_share": 0.0,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "D15",
+      "gain_share": 0.0169,
+      "psi_val": 0.0476,
+      "psi_test": 0.0965,
+      "psi_early_late_train": 0.1938,
+      "adversarial_gain_share": 0.1072,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C4",
+      "gain_share": 0.0166,
+      "psi_val": 0.025,
+      "psi_test": 0.0091,
+      "psi_early_late_train": 0.0951,
+      "adversarial_gain_share": 0.0003,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "R_emaildomain",
+      "gain_share": 0.015,
+      "psi_val": 0.0375,
+      "psi_test": 0.0217,
+      "psi_early_late_train": 0.1214,
+      "adversarial_gain_share": 0.0004,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "V243",
+      "gain_share": 0.0144,
+      "psi_val": 0.047,
+      "psi_test": 0.0255,
+      "psi_early_late_train": 0.1335,
+      "adversarial_gain_share": 0.0,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C8",
+      "gain_share": 0.0143,
+      "psi_val": 0.0407,
+      "psi_test": 0.0169,
+      "psi_early_late_train": 0.132,
+      "adversarial_gain_share": 0.0,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "P_emaildomain",
+      "gain_share": 0.0138,
+      "psi_val": 0.0055,
+      "psi_test": 0.0077,
+      "psi_early_late_train": 0.0131,
+      "adversarial_gain_share": 0.0023,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "C11",
+      "gain_share": 0.0135,
+      "psi_val": 0.0223,
+      "psi_test": 0.014,
+      "psi_early_late_train": 0.0302,
+      "adversarial_gain_share": 0.0034,
+      "cardinality_alone": false
+    },
+    {
+      "feature": "V201",
+      "gain_share": 0.0134,
+      "psi_val": 0.0417,
+      "psi_test": 0.0169,
+      "psi_early_late_train": 0.1301,
+      "adversarial_gain_share": 0.0006,
+      "cardinality_alone": false
+    }
+  ],
+  "predictions": {
+    "a": {
+      "lgbm": "falls steadily",
+      "nn": "falls steadily"
+    },
+    "a_predicted": "stays flat",
+    "b": "LightGBM faster",
+    "b_predicted": "net faster",
+    "c": 0.8932996714367686,
+    "c_predicted": "0.6-0.8"
+  },
+  "model_hashes_unchanged": true
+}

@@ -1,0 +1,378 @@
+{
+  "caption": "Exploratory. Tree counts and config were tuned for a 109-day window, so the 45-day trailing window is handicapped (a bias against recency); nothing was re-tuned to fix it. Every month here was seen in earlier phases.",
+  "config": {
+    "learning_rate": 0.027573081620294645,
+    "num_leaves": 218,
+    "min_child_samples": 65,
+    "colsample_bytree": 0.3738466956991607,
+    "subsample": 0.8145540757698546,
+    "reg_lambda": 5.112322143469584
+  },
+  "trees": {
+    "1": 350,
+    "2": 339,
+    "3": 368,
+    "4": 431,
+    "5": 352
+  },
+  "gap_days": 7,
+  "trail_days": 45,
+  "rebuild_check_max_diff": 0.0,
+  "cells": [
+    {
+      "origin": 90,
+      "window": "expanding",
+      "train_days": [
+        0,
+        83
+      ],
+      "train_rows": 294193,
+      "horizon": 1,
+      "target_days": [
+        90,
+        120
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.9074022277256348,
+        "std": 0.0005240437363144073,
+        "min": 0.9067187675215118,
+        "max": 0.9081653088759187
+      },
+      "per_seed": [
+        0.9067187675215118,
+        0.9072455832931342,
+        0.9073368817036029,
+        0.9081653088759187,
+        0.907544597234007
+      ]
+    },
+    {
+      "origin": 90,
+      "window": "expanding",
+      "train_days": [
+        0,
+        83
+      ],
+      "train_rows": 294193,
+      "horizon": 2,
+      "target_days": [
+        120,
+        150
+      ],
+      "model_age_days": 37,
+      "roc_auc": {
+        "mean": 0.8964052198856056,
+        "std": 0.001464188485351204,
+        "min": 0.8943569500925541,
+        "max": 0.8978857781090032
+      },
+      "per_seed": [
+        0.8954376401975441,
+        0.8978857781090032,
+        0.8973641242512382,
+        0.8943569500925541,
+        0.896981606777688
+      ]
+    },
+    {
+      "origin": 90,
+      "window": "expanding",
+      "train_days": [
+        0,
+        83
+      ],
+      "train_rows": 294193,
+      "horizon": 3,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 67,
+      "roc_auc": {
+        "mean": 0.8910569273743428,
+        "std": 0.0010090992167659594,
+        "min": 0.8896741701999844,
+        "max": 0.8920456405276976
+      },
+      "per_seed": [
+        0.8903335564896804,
+        0.8920456405276976,
+        0.8917497622698828,
+        0.8896741701999844,
+        0.8914815073844693
+      ]
+    },
+    {
+      "origin": 90,
+      "window": "trailing",
+      "train_days": [
+        38,
+        83
+      ],
+      "train_rows": 133843,
+      "horizon": 1,
+      "target_days": [
+        90,
+        120
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.8967998766848501,
+        "std": 0.0014865339803074441,
+        "min": 0.8950669392480907,
+        "max": 0.898461840901951
+      },
+      "per_seed": [
+        0.8976085442029672,
+        0.8974673442286417,
+        0.8953947148426,
+        0.8950669392480907,
+        0.898461840901951
+      ]
+    },
+    {
+      "origin": 90,
+      "window": "trailing",
+      "train_days": [
+        38,
+        83
+      ],
+      "train_rows": 133843,
+      "horizon": 2,
+      "target_days": [
+        120,
+        150
+      ],
+      "model_age_days": 37,
+      "roc_auc": {
+        "mean": 0.8805388940941693,
+        "std": 0.002750539543934027,
+        "min": 0.8760536237336444,
+        "max": 0.8830647604256116
+      },
+      "per_seed": [
+        0.8830647604256116,
+        0.8824775830633435,
+        0.880601647824421,
+        0.8760536237336444,
+        0.880496855423826
+      ]
+    },
+    {
+      "origin": 90,
+      "window": "trailing",
+      "train_days": [
+        38,
+        83
+      ],
+      "train_rows": 133843,
+      "horizon": 3,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 67,
+      "roc_auc": {
+        "mean": 0.8782224288927989,
+        "std": 0.0022036918537335602,
+        "min": 0.8749093393944828,
+        "max": 0.8807918713980813
+      },
+      "per_seed": [
+        0.8807918713980813,
+        0.8790654406789099,
+        0.8774208060795818,
+        0.8749093393944828,
+        0.8789246869129381
+      ]
+    },
+    {
+      "origin": 120,
+      "window": "expanding",
+      "train_days": [
+        0,
+        113
+      ],
+      "train_rows": 392750,
+      "horizon": 1,
+      "target_days": [
+        120,
+        150
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.9240811671651347,
+        "std": 0.0007320201667109617,
+        "min": 0.923038099392384,
+        "max": 0.9249806296194145
+      },
+      "per_seed": [
+        0.9243428817084274,
+        0.92431444935849,
+        0.9237297757469577,
+        0.9249806296194145,
+        0.923038099392384
+      ]
+    },
+    {
+      "origin": 120,
+      "window": "expanding",
+      "train_days": [
+        0,
+        113
+      ],
+      "train_rows": 392750,
+      "horizon": 2,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 37,
+      "roc_auc": {
+        "mean": 0.9091062929737201,
+        "std": 0.0011860632294006493,
+        "min": 0.9078047885086001,
+        "max": 0.9110322748068785
+      },
+      "per_seed": [
+        0.9091297886696996,
+        0.9110322748068785,
+        0.9078047885086001,
+        0.9087011354845106,
+        0.9088634773989117
+      ]
+    },
+    {
+      "origin": 120,
+      "window": "trailing",
+      "train_days": [
+        68,
+        113
+      ],
+      "train_rows": 142378,
+      "horizon": 1,
+      "target_days": [
+        120,
+        150
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.9164317561659752,
+        "std": 0.0006132830536534306,
+        "min": 0.9158112641398345,
+        "max": 0.917379551007075
+      },
+      "per_seed": [
+        0.916049781171751,
+        0.917379551007075,
+        0.9162670771774644,
+        0.9166511073337512,
+        0.9158112641398345
+      ]
+    },
+    {
+      "origin": 120,
+      "window": "trailing",
+      "train_days": [
+        68,
+        113
+      ],
+      "train_rows": 142378,
+      "horizon": 2,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 37,
+      "roc_auc": {
+        "mean": 0.8997090789613438,
+        "std": 0.0023971579346035777,
+        "min": 0.8973434410804889,
+        "max": 0.9030977866902105
+      },
+      "per_seed": [
+        0.8993104993052198,
+        0.9030977866902105,
+        0.9010629704529218,
+        0.8977306972778782,
+        0.8973434410804889
+      ]
+    },
+    {
+      "origin": 150,
+      "window": "expanding",
+      "train_days": [
+        0,
+        143
+      ],
+      "train_rows": 479461,
+      "horizon": 1,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.9248480950957658,
+        "std": 0.0007692088988868742,
+        "min": 0.9241619486390097,
+        "max": 0.9260285680733029
+      },
+      "per_seed": [
+        0.9246713239466818,
+        0.9241619486390097,
+        0.925147982409398,
+        0.9242306524104364,
+        0.9260285680733029
+      ]
+    },
+    {
+      "origin": 150,
+      "window": "trailing",
+      "train_days": [
+        98,
+        143
+      ],
+      "train_rows": 132098,
+      "horizon": 1,
+      "target_days": [
+        150,
+        180
+      ],
+      "model_age_days": 7,
+      "roc_auc": {
+        "mean": 0.9173467661442561,
+        "std": 0.001058013348176027,
+        "min": 0.9158627783067794,
+        "max": 0.9185186054654025
+      },
+      "per_seed": [
+        0.9185186054654025,
+        0.918194266277544,
+        0.9169366394135295,
+        0.9158627783067794,
+        0.9172215412580252
+      ]
+    }
+  ],
+  "model_hashes": {
+    "frozen.json": "5d2165e53ff4cfe352e042411018b36b5fd6cf76a73118eec63760484185fa25",
+    "lgbm_seed1.txt": "b5827c33961affe97e828f95fe7e80a82a32f4fd3a4f544b899445689a6f7ceb",
+    "lgbm_seed2.txt": "096e5957cb762ed3a9373deac1a4e61adc58c799fed5e40cc411f4f24976bafd",
+    "lgbm_seed3.txt": "223917da1b240984782c247b2f5846b5f441e8c8d11d7d0bb914410683ab9a92",
+    "lgbm_seed4.txt": "5ee9ae2a594e809c4d7c5298d9e38af331595315dfeb75b5e475daeb62fbac10",
+    "lgbm_seed5.txt": "a5ad8319c3a4c037450c11788e72f4ade8bc4dbc48b936144c71e70946d6c8cb",
+    "lgbm_test_scored.npz": "1dddbb4e7c34d545d0a8aaf7f60fe563c8126f8c1e1d8281b07df30fbd2b7b61",
+    "lgbm_val.npz": "cbe13d65be9cccdf7e434676a9580b2c8e5fb9c8d8250110f5dea978ce66e179",
+    "lgbm_val_scored.npz": "cbe13d65be9cccdf7e434676a9580b2c8e5fb9c8d8250110f5dea978ce66e179",
+    "nn_seed1.pt": "e0b7b2dd027311cb7515d7505e07e1fb510524fe1f0d76b1e6c4df8a2004dc6e",
+    "nn_seed2.pt": "820e0aad0ab268339d5d38f9d0acdf4a369d1c1e2879aadb67dd32a1d5e02c58",
+    "nn_seed3.pt": "7c97636ff4efb5f22ed34af388a32162cd6dc1bb9deaca6a673b2074925eba46",
+    "nn_seed4.pt": "8ca6c0a3fb050310f0e08411c904514790443c491665ef4632e58cb0a177366a",
+    "nn_seed5.pt": "c77486b2d992bf13e31c77fc0d198ea071e1f8b6cd61cdefa53617cd05c33e1b",
+    "nn_test_scored.npz": "1b60d0ce6a3756c630b9b94dac404bf42e489693878c69eaaafa5727213603e6",
+    "nn_val.npz": "f3c124e2610a276feadf7dfa8ede8f69cf6fba5f23b378935b09f33937efedba",
+    "nn_val_scored.npz": "f3c124e2610a276feadf7dfa8ede8f69cf6fba5f23b378935b09f33937efedba"
+  }
+}

@@ -241,3 +241,81 @@ Paired day bootstrap (1,000 draws of 30 days): ROC-AUC gap LightGBM - network 0.
   - Origins: day 90, 120, 150, each with a 7-day gap before it. Windows: expanding (all earlier days) vs trailing (last 45 days, fixed now). Each following 30-day block is scored.
   - It reuses months already seen in earlier phases. The config and tree counts were tuned for a 109-day window, so the 45-day window is handicapped. Nothing is re-tuned to fix that.
 - Link between drift and the fraud model: LightGBM gain importance (mean of the 5 frozen models) vs PSI and adversarial importance. Rank correlation and top-20 overlap only. Any link is a hypothesis, not proof. The net has no gain importance.
+- Retrain rebuild check: seed 1 retrained with the retrain recipe on Phase 5's train rows reproduced the frozen model's validation scores exactly (max difference 0). So "frozen config, own tree count, no early stopping" is the same model recipe.
+- Early vs late train was planned as a PSI / adversarial noise floor. It turned out to contain real change: the first ~8 weeks have a different product mix (products H and R about 11% each early, 2-4% later) and different missing-data rates (e.g. V1 missing 66% early, 45% late). It is reported as "within-train drift", not as noise. The chance level (chi-square) is the pure-luck reference instead.
+
+**Result (2026-10-09; descriptive only; models unchanged, sha256 checked by `report`):**
+
+Reproducibility: pooled block ROC-AUC (per seed, then mean) = val 0.9260 / 0.8874, test 0.9053 / 0.8754 (LightGBM / net), equal to Phases 4-5 to 4 decimals.
+
+Block table (ROC-AUC, mean of 5 seeds, day-bootstrap 95% range):
+| block | LightGBM | neural net |
+|---|---|---|
+| train (in-sample) | 0.9877 | 0.9149 |
+| gap1 (7 days right after train) | 0.9392 (0.931-0.949) | 0.9056 (0.896-0.917) |
+| val (weeks 16-20, used for tuning) | 0.9260 (0.917-0.934) | 0.8874 (0.880-0.895) |
+| gap2 (7 days, never used) | 0.8947 (0.871-0.912) | 0.8431 (0.826-0.857) |
+| test (spent in Phase 5) | 0.9053 (0.899-0.913) | 0.8754 (0.869-0.883) |
+
+Weekly (weeks 17-25, ROC-AUC): LightGBM 0.944, 0.926, 0.924, 0.893, 0.910, 0.893, 0.910, 0.898, 0.911; net 0.902, 0.884, 0.884, 0.858, 0.863, 0.859, 0.880, 0.876, 0.880. Each week has 565-1,069 frauds; a weekly range is about +-0.01 to 0.02. Chart: `reports/weekly_auc.png`.
+
+| pre-registered test | LightGBM | neural net |
+|---|---|---|
+| H1 slope per week, weeks 17-25 (95% range) | -0.0041 (-0.0058 to -0.0024) | -0.0020 (-0.0038 to -0.0002) |
+| H1 | holds | holds |
+| slope without weeks 24-25 | -0.0065 (-0.0087 to -0.0043) | -0.0049 (-0.0070 to -0.0028) |
+| label-delay flag | no | no |
+| within-val slope (weeks 17-19) | -0.020 to -0.002 | -0.017 to -0.001 |
+| within-test slope (weeks 22-25) | -0.002 to +0.010 | +0.000 to +0.011 |
+| step val - gap2 | +0.031 (0.010 to 0.056) | +0.044 (0.028 to 0.063) |
+| step gap2 - test | -0.011 (-0.035 to 0.009) | -0.032 (-0.051 to -0.017) |
+| optimism vs drift signature | inconclusive | inconclusive |
+
+H2: slope difference LightGBM - net = -0.0021 (95% -0.0033 to -0.0009): **LightGBM faster**. The (val - gap2) step difference LightGBM - net is -0.033 to +0.007, so there is no sign that a bigger validation-optimism step explains LightGBM's faster fall.
+
+PSI (`reports/psi_top20.png`; 0.1 and 0.25 are conventions, not laws):
+| pair | rows | PSI > 0.1 | PSI > 0.25 | above 0.1 but within chance level |
+|---|---|---|---|---|
+| early vs late train (within-train drift) | 209,660 vs 171,155 | 298 | 18 | 0 |
+| train vs val | 380,815 vs 84,093 | 35 | 9 | 0 |
+| train vs test | 380,815 vs 84,233 | 25 | 20 | 0 |
+Top train vs test: id_31 (browser version) 1.18, id_13 0.52, M7-M9 0.38, D11 0.36, V1-V11 0.33 (one shared missing-data pattern), M1-M3 0.31. Most of these shifts are changes in how often the column is missing.
+
+Adversarial AUC (5 day-block folds; LightGBM defaults; no fraud label): early vs late train 0.833 (folds 0.66-0.91), train vs val 0.877 (0.66-0.96), **train vs test 0.893 (0.71-0.95)**. Top train-vs-test columns: id_31, id_13, D15, dist1, D11.
+
+Link to the fraud model (LightGBM gain; hypothesis, not proof):
+- Spearman rank correlation of gain vs train-vs-test PSI: +0.10. The top-20 gain and top-20 PSI lists share **no** column.
+- Gain vs adversarial gain: +0.57, but both are close to 0 for most columns, which inflates a rank correlation. The top-20 lists share 2 columns (C13, D15).
+- The columns the model leans on most (V258, C14, card2, C13, C1, card1) all have train-vs-test PSI under 0.05.
+
+Retraining exercise (exploratory, LightGBM, ROC-AUC mean +- std over 5 seeds):
+| window | origin day | next 30 days | +30 | +60 |
+|---|---|---|---|---|
+| expanding | 90 | 0.9074 +- 0.0005 | 0.8964 +- 0.0015 | 0.8911 +- 0.0010 |
+| expanding | 120 | 0.9241 +- 0.0007 | 0.9091 +- 0.0012 | |
+| expanding | 150 | 0.9248 +- 0.0008 | | |
+| trailing 45 days | 90 | 0.8968 +- 0.0015 | 0.8805 +- 0.0028 | 0.8782 +- 0.0022 |
+| trailing 45 days | 120 | 0.9164 +- 0.0006 | 0.8997 +- 0.0024 | |
+| trailing 45 days | 150 | 0.9173 +- 0.0011 | | |
+
+*Caption: Exploratory. Tree counts and config were tuned for a 109-day window, so the 45-day trailing window is handicapped (a bias against recency); nothing was re-tuned to fix it. Every month here was seen in earlier phases.*
+
+How to read the retraining table:
+- **Staleness.** Read the same target month (days 150-180) down the diagonal. Models whose data ended at day 143, 113 and 83 score 0.925 / 0.909 / 0.891 (expanding) and 0.917 / 0.900 / 0.878 (trailing, same 45-day size each time). So two months of extra age cost about 0.03-0.04 ROC-AUC.
+- **Recency vs amount of data.** Expanding beat trailing in every cell (by 0.007-0.016). Keeping older data helped, under the handicap stated in the caption.
+
+**Verdicts on the predictions (rules fixed above):**
+- (a) Predicted "stays flat". Result: **falls steadily** for both models (H1 slope range below 0). **Wrong.** The fall is front-loaded: steepest in weeks 16-20, roughly flat across the test weeks (22-25).
+- (b) Predicted "net degrades faster". Result: **LightGBM faster** (slope difference range below 0). **Wrong.**
+- (c) Predicted adversarial AUC 0.6-0.8. Result: **0.893** (over 0.8). **Wrong.**
+
+**What the results say (descriptive; hypotheses for a future month, not conclusions):**
+- Both frozen models lose ranking quality after training ends. LightGBM falls about twice as fast per week, but stays ahead of the net in every out-of-sample week.
+- **H1 holding does not establish drift.** The separator is inconclusive by the pre-set rule, for two reasons:
+  - Against pure optimism: there is a downward trend inside the validation weeks.
+  - Against a smooth drift line: gap2 (never used) sits below both validation and test, a dip rather than a point between them. Weeks 20-21 were hard for both models.
+- Not label delay: the last two weeks are not where the fall is. Without them the slope is steeper.
+- Hypothesis: "memory fade". LightGBM scores 0.988 in-sample and 0.939 in the week right after training, then settles near 0.90. Its top columns include card and address identifiers (card1, card2, addr1). A model that partly remembers recently active cards would lose that edge as cards turn over, faster for the model that memorises more. This fits the front-loaded fall, the faster LightGBM slope, and fresher retrains doing better. It is not tested here.
+- Column drift is large and easy to detect, but it is mostly in columns the fraud model barely uses (browser version, M flags, missing-data patterns). The months look different (adversarial AUC 0.89), yet the train period also looks different from itself (0.83). "Looks different" is this data's normal state and does not by itself predict the score loss.
+- The net also dips inside train (weeks 12-13, about 0.88 in-sample) while LightGBM does not. Some fraud patterns there are hard for the net even on rows it trained on.
+- PR-AUC fell more than ROC-AUC (LightGBM about 0.9 in-sample, about 0.5 on test). It also moves with the weekly fraud rate (2.1%-5.1%), so it is not used for the trend tests.

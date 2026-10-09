@@ -560,7 +560,7 @@ def psi_chart(t):
     ax.grid(axis="x", color=GRID, lw=0.8)
     ax.grid(axis="y", visible=False)
     yy = np.arange(len(top))
-    for name, color, label, mk in (("early_vs_late_train", "#8a8984", "early vs late train (noise floor)", "s"),
+    for name, color, label, mk in (("early_vs_late_train", "#8a8984", "early vs late train (within-train drift)", "s"),
                                    ("train_vs_val", COLOR["nn"], "train vs validation", "o"),
                                    ("train_vs_test", COLOR["lgbm"], "train vs test", "o")):
         ax.scatter([max(t[name][c]["psi"], 1e-3) for c in top], yy, color=color, s=40, marker=mk, label=label,
@@ -569,6 +569,7 @@ def psi_chart(t):
         ax.axvline(v, color=INK2, lw=1, ls="--", zorder=1)
         ax.text(v, len(top) - 0.3, f" {v}", color=INK2, fontsize=8)
     ax.set_xscale("log")
+    ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
     ax.set_yticks(yy, top)
     ax.set_xlabel("PSI (log scale; dashed lines are conventions, not laws)", color=INK2, fontsize=9)
     ax.legend(frameon=False, fontsize=9, loc="lower right", labelcolor=INK)
