@@ -420,3 +420,45 @@ A read-only review that tried to break the claims above. No model, threshold, te
 - Parity shows the service equals the offline code on validation rows, not that production inputs look like these anonymised columns.
 - Latency and image size are for this laptop and this base image.
 - "Flag" is the cost rule only: no customer-friction cost, no review capacity (the measured operating point was about 280 flags per day).
+
+## Phase 8: scheduled retraining with delayed labels (exploratory, descriptive)
+
+**Status of this phase:** exploratory and descriptive. The test set was spent in Phase 5. This phase reuses months already seen: the evaluation window (days 98-181) contains late train, validation (which chose both configs and their stopping points) and the test block. Nothing here changes a model, threshold or config already reported, and nothing here chooses a model for the service. Every number is a description of these 12 weeks, not a held-out estimate.
+
+**Question:** if a fraud team retrained on a schedule using only the labels it would really have, how many dollars is that worth, and which model copes better? This removes the "labels known within 7 days" assumption behind audit A1.
+
+**Predictions (before running, 2026-10-09, no reasons given):**
+- (a) Retraining every 4 weeks beats never retraining in dollars at D = 30: **neither** model.
+- (b) A longer label delay (60 vs 7 days) makes retraining matter: **more**.
+- (c) Gains more from retraining: **LightGBM**.
+
+**Design (fixed before any run):**
+- Deployment clock: first deployment day r0 = 98 (days counted from the first payment). Decision points r = 98, 105, ..., 175; each is followed by a 7-day evaluation block [r, r+7); the 12 blocks cover days 98-181 exactly. Options weighed: r0 = 70 gives 16 weeks but a D = 60 first model from days 0-9 only (~40k rows, all from the early product mix); r0 = 112 (just after the frozen models' train end, day 109) gives only 10 weeks; r0 = 98 gives 12 weeks (whole 4-, 2- and 1-week cycles) and a D = 60 first model from days 0-37 (~160k rows, ~4.3k frauds).
+- Label delay D: a row at time s is trainable at decision day r only if s + D days <= R and s < R (R = start of day r). D in {7, 30, 60}; D = 0 is shown only as an unrealistic upper bound and never used in a verdict. Rows whose label has not arrived are dropped from training, features included, so a training row always has its label.
+- Policies, expanding window: never = {98}; every 4 weeks = {98, 126, 154}; every 2 weeks = {98, 112, ..., 168}; weekly = {98, 105, ..., 175}. At each block the active model is the latest one in the schedule retrained on or before the block's start. Models are shared across policies and delays when their training rows are identical (detected by hashing the row mask).
+- Both models, identical rules, fixed recipes (nothing tuned on evaluation data): LightGBM = Phase 4 trial 13 with each seed's Phase 4 tree count (350/339/368/431/352), no early stopping; net = Phase 4 trial 8 with each seed's Phase 4 best epoch (6/5/4/10/14), no early stopping; the net's preprocessing is refitted on each model's own training rows. Seeds 1-5.
+- Recipe check before any grid fit: on Phase 5's train rows, seed 1 of each recipe must reproduce the frozen Phase 5 validation scores, or the run stops.
+- Decision rule: raw probabilities with the Phase 5 cost rule (flag if p x amount > C), C = $10. A calibrator per retrain would need held-out labelled data that a delayed-label team does not have.
+
+**Metrics and rules (fixed before any run):**
+- Primary: total net savings at C = $10 (fraud dollars caught minus C x flags) summed over the 12 blocks, the Phase 5 cost model with the same caveats. Per seed, a policy uses that seed's models throughout; mean +- std over 5 seeds. The realistic headline cell is D = 30.
+- Secondary: ROC-AUC and PR-AUC over the 84 days pooled (per seed, then mean); flags per day; savings split by returning vs new clients. Client key = card1 + addr1 + (day - D1), as in audit A1. A row is "returning" for delay D if its client has an earlier row whose label is available at the block's decision day; the rule is fixed per D, so policies and models are compared on the same rows. A missing key counts as new.
+- Extra dollars per retrain = (savings(policy) - savings(never)) / number of retrains after r0. The cost of a retrain (compute, engineering, checking) is not priced.
+- Ranges: paired day-block bootstrap, 1,000 draws of the 84 evaluation days, seed 0; every model, delay, policy and segment on the same draws; per-row contributions averaged over seeds before drawing (as in Phase 5).
+- **"Retraining pays"** for (model, D, policy): mean savings(policy) - savings(never) > 0 and its 95% range excludes 0. Range wholly below 0 = "retraining costs money". Otherwise "cannot tell".
+- Prediction (a) is scored per model at D = 30, every 4 weeks vs never, by the rule above.
+- Prediction (b), per model: gain(D = 60) - gain(D = 7), gain = (every 4 weeks) - never. Range > 0 = "more", < 0 = "less", else "cannot tell".
+- **"Network copes better"** = it gains more dollars from retraining: [net(4-weekly) - net(never)] - [LightGBM(4-weekly) - LightGBM(never)] at D = 30. Range > 0 = net, < 0 = LightGBM, else "cannot tell". This scores prediction (c). Coping better is not saving more: absolute dollars are reported separately.
+- Sanity ordering (a check, not a verdict): for each policy and model, savings should not rise as D grows (0 >= 7 >= 30 >= 60). A pair where the longer-delay savings minus the shorter-delay savings has a range wholly above 0 stops the report for investigation before any result is written.
+
+**Compute budget:** the full grid (4 policies x 4 delays x 2 models x 5 seeds, ~37 distinct training sets per model) was estimated at ~4.5 h. Reduced, keeping 5 seeds: the weekly policy is run only for D = 0 and 7 (where it costs one extra training set because those delays share a chain); D = 30 and 60 get never / every 4 weeks / every 2 weeks. 25 training sets per model, estimated ~3.2 h. No pre-registered verdict uses the weekly policy.
+
+**What could make the conclusion misleading (stated before running):**
+- Reused months: the evaluation window contains validation and the spent test block.
+- Fresher and more data are mixed (audit A5): with an expanding window, a retrain adds newer rows and more rows. A longer delay also leaves the never-retrain model with less data (at D = 60, days 0-37, the period with the different product mix), so "retraining matters more at long delay" may partly mean "the never-model was starved".
+- Recipes tuned for one window: tree and epoch counts were chosen for a 109-day window; on smaller sets the net gets fewer gradient steps per epoch. Nothing is re-tuned.
+- Those counts came from early stopping on validation days (116-145), which lie inside the evaluation window.
+- Savings use raw probabilities, so they mix ranking quality with calibration; ROC-AUC is the ranking-only check.
+- Labels trickle in and some never arrive, and this dataset's labels spread from a chargeback to the client's later payments; one fixed D is a simplification.
+- C = $10 is assumed; no review-capacity limit; day-bootstrap ranges ignore clients spanning days; 84 days is one quarter.
+- Seed k is reused at every retrain, so the seed spread is not independent across models. The client key is approximate. Pooled AUC mixes scores from different models across blocks.
