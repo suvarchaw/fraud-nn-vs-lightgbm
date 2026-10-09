@@ -401,7 +401,7 @@ def chart(res):
             label = "D = 0 (upper bound)" if d == 0 else f"D = {d} days"
             ax.errorbar(xs, mid, yerr=err, color=DELAY_COLOR[d], lw=2, marker="o", ms=6, capsize=3,
                         ls="--" if d == 0 else "-", label=label, zorder=3)
-            ax.annotate(f"D={d}", (xs[-1], mid[-1]), xytext=(6, 0), textcoords="offset points", va="center",
+            ax.annotate(f"D={d}", (xs[-1], mid[-1]), xytext=(6, {0: 6, 7: -6}.get(d, 0)), textcoords="offset points", va="center",
                         color=INK2, fontsize=8)
         ax.set_xticks(range(len(pol)), pol)
         ax.set_xlim(-0.3, len(pol) - 0.5)

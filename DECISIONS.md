@@ -478,3 +478,60 @@ A read-only review that tried to break the claims above. No model, threshold, te
 - Test (a) confirms the row count with a throwaway no-bagging LightGBM fit (subsample = 1), because the winning config bags about 81% of rows per tree.
 - Test caps (20 trees, 1 epoch) keep the suite near 5 minutes. They change how much a model learns, not which rows it sees.
 - `fit` is resumable: a training set whose score file exists is skipped. Per-row scores stay in git-ignored `models/phase8/`.
+
+**Result (2026-10-10; exploratory and descriptive; 84 evaluation days, days 98-181, $1,438,307 of fraud dollars; C = $10 is assumed; the cost of a retrain is not priced):**
+
+Checks:
+- Recipe check passed for both models: seed 1 on Phase 5's train rows reproduced the frozen validation scores with max difference 0 (LightGBM and net).
+- `models/phase5/` hashes were unchanged after both fits.
+- The sanity ordering passed: no savings rose with a longer delay.
+- Contribution sums equal `business.outcome` savings for every cell and seed.
+
+Savings (mean +- std over 5 seeds) and the gain over never retraining (paired day-bootstrap 95% range). Every gain range is above 0, so by the pre-registered rule **retraining pays in all 20 cells**.
+
+| D | policy | LightGBM savings | LightGBM gain (95%) | net savings | net gain (95%) |
+|---|---|---|---|---|---|
+| 0 (bound) | never | $927k +- 5k | | $900k +- 6k | |
+| 0 (bound) | 4-weekly | $982k +- 3k | +$54k (40 to 72) | $909k +- 3k | +$9k (5 to 14) |
+| 0 (bound) | 2-weekly | $1,003k +- 2k | +$75k (60 to 93) | $914k +- 5k | +$14k (9 to 19) |
+| 0 (bound) | weekly | $1,013k +- 4k | +$85k (71 to 102) | $917k +- 8k | +$17k (11 to 23) |
+| 7 | never | $906k +- 4k | | $890k +- 21k | |
+| 7 | 4-weekly | $959k +- 4k | +$53k (38 to 70) | $896k +- 14k | +$6k (1 to 10) |
+| 7 | 2-weekly | $975k +- 4k | +$70k (54 to 87) | $899k +- 10k | +$8k (2 to 14) |
+| 7 | weekly | $990k +- 2k | +$84k (68 to 102) | $906k +- 7k | +$15k (9 to 21) |
+| **30** | never | $856k +- 6k | | $828k +- 45k | |
+| **30** | **4-weekly** | $897k +- 4k | **+$41k (28 to 55)** | $855k +- 21k | **+$27k (18 to 37)** |
+| 30 | 2-weekly | $909k +- 5k | +$53k (38 to 69) | $868k +- 16k | +$40k (30 to 51) |
+| 60 | never | $787k +- 14k | | $815k +- 60k | |
+| 60 | 4-weekly | $840k +- 9k | +$54k (39 to 70) | $851k +- 30k | +$35k (24 to 48) |
+| 60 | 2-weekly | $847k +- 8k | +$61k (47 to 77) | $851k +- 24k | +$35k (24 to 48) |
+
+(The net's two D = 60 retrain rows differ by $0.46 in mean savings. They use different models with different seed spreads; checked, a coincidence.)
+
+Pooled ROC-AUC (mean of 5 seeds), never -> 4-weekly: LightGBM 0.906 -> 0.922 (D = 7), 0.891 -> 0.906 (D = 30), 0.873 -> 0.885 (D = 60); net 0.872 -> 0.878, 0.864 -> 0.866, 0.848 -> 0.856. LightGBM ranks better in every cell.
+
+Extra dollars per retrain fall as retraining gets more frequent. LightGBM at D = 7: 4-weekly $26.6k per retrain, 2-weekly $13.9k, weekly $7.6k. At D = 30: LightGBM $20.5k / $10.7k; net $13.4k / $7.9k.
+
+Returning vs new clients (client key as in audit A1; 11.8% of rows have no key and count as new). The share of evaluation rows from a client with a label already back falls with the delay: 44% (D = 7), 36% (D = 30), 27% (D = 60). Gain from 4-weekly retraining, by segment (95% range):
+
+| | D = 7 returning | D = 7 new | D = 30 returning | D = 30 new | D = 60 returning | D = 60 new |
+|---|---|---|---|---|---|---|
+| LightGBM | +$32k (24 to 42) | +$21k (12 to 31) | +$17k (10 to 25) | +$24k (15 to 34) | +$5k (2 to 9) | +$48k (35 to 63) |
+| net | +$3k (1 to 6) | +$3k (-1 to 6) | +$4k (0 to 8) | +$23k (16 to 30) | +$1k (-1 to 4) | +$35k (24 to 46) |
+
+Savings on returning clients, never-retrain LightGBM: $177k (D = 7), $79k (D = 30), $42k (D = 60).
+
+Run time: LightGBM 169 min (plan 102). The last two training sets took 21 and 47 min while the Mac swapped about 3.7 GB, which is over the 153-minute stop-and-ask limit. My progress watch had lapsed at 88 min, so the limit was only seen after the run finished. The fits are deterministic, so time does not change any number. Net 79 min (plan 90). Report 1 min.
+
+**Verdicts on the predictions (rules fixed above, with the dated amendment for (a)):**
+- (a) Predicted "neither" (monthly retraining pays for neither model at D = 30). Result: it pays for both. LightGBM +$40,940 (95% $27,731 to $54,905), net +$26,727 ($17,882 to $36,576). Both are above $1,000 with ranges above 0. **Wrong** for both models, so wrong overall.
+- (b) Predicted "more" (a 60-day delay makes 4-weekly retraining matter more than a 7-day delay). Result: LightGBM **cannot tell** (+$428, range -$16,352 to +$16,473), so not confirmed. Net **more** (+$29,748, range $19,385 to $41,767), so right. The net's "more" leans on the starved-never-model caveat: its D = 60 never-retrain model is the weakest and least stable cell (seed spread +-$60k, worst seed $710k).
+- (c) Predicted "LightGBM gains more from retraining". Result: net gain minus LightGBM gain at D = 30 = -$14,213 (95% -$24,447 to -$3,641): **LightGBM. Right.** By the pre-registered definition, LightGBM "copes better" with scheduled retraining.
+
+**What the results say (descriptive; reused months; hypotheses for a future period):**
+- Retraining paid in every cell, for both models, even with 60-day labels. The first retrain after 4 weeks earns the most; more frequent retraining adds less each time. Whether $8k-27k per retrain beats its real cost (compute, checks, release work) is outside the data.
+- Label delay costs more than retraining earns back. LightGBM 4-weekly falls from $959k (D = 7) to $840k (D = 60), a loss of $119k, while the gain from retraining is about $41k-54k. The D = 0 bound is close to D = 7 ($927k vs $906k never), so a one-week delay costs little.
+- The delay removes LightGBM's card memory (audit A1). Never-retrain LightGBM saves $177k on returning clients at D = 7 but only $42k at D = 60. At D = 7 most of LightGBM's retraining gain is on returning clients; at D = 60 almost all of it is on new clients. This is the "labels known within 7 days" assumption made visible.
+- LightGBM ranks better (ROC-AUC) in every cell. In dollars at D = 60 the net's mean is higher (never $815k vs $787k; 4-weekly $851k vs $840k), but its seed spread is +-$24-60k. The cross-model dollar difference was not pre-registered and has no paired range, so it is not established. It is a hypothesis: under long delay LightGBM's ranking edge, which partly came from card memory, no longer turns into more dollars. Raw-probability calibration may play a part (the dollar rule mixes ranking with calibration).
+- The net is unstable on small training sets: never-retrain seed spread +-$45k at D = 30 and +-$60k at D = 60, against +-$6-14k for LightGBM. This fits the recipe caveat: a fixed epoch count gives fewer gradient steps on fewer rows. Retraining on more rows also shrinks the spread.
+- Flags per day rise with retraining (LightGBM D = 30: 156 never, 175 4-weekly). Some of the extra dollars cost extra review work. That work is priced at C, but no capacity limit is applied.
