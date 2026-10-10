@@ -5,6 +5,8 @@ Under an assumed $10 review cost per flagged payment, the LightGBM rule saves ab
 LightGBM's lead comes mostly from returning clients: on new clients the ROC-AUC gap is only about 0.006 (validation, checked after the fact).
 This is an offline simulation, not a deployed system.
 
+Demo (about 90 seconds): [Docker scoring service, README, and results](https://drive.google.com/file/d/1pAZ-GizcqRoUWba1TiCFQ3WVbssDKLM6/view?usp=sharing)
+
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![LightGBM](https://img.shields.io/badge/LightGBM-4.7-brightgreen) ![PyTorch](https://img.shields.io/badge/PyTorch-2.14-orange) ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688) ![Docker](https://img.shields.io/badge/Docker-service-2496ED) [![Tests (data-free subset)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml/badge.svg)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml)
 
 
@@ -105,6 +107,8 @@ retraining gains of $41k to $54k. The cost of retraining itself is not counted.
   Only the test numbers are quoted as results.
 
 ## How to run
+
+`scripts/demo.sh` runs the Docker demo after `python -m src.export` (`PAUSE=0` skips the pauses between steps).
 
 You need the Kaggle IEEE-CIS data (not redistributable, not in this repo). Everything under `data/` and `models/`
 is git-ignored, so a fresh clone has no trained models. Steps, in order:
