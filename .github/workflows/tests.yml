@@ -1,0 +1,54 @@
+name: Tests (data-free subset)
+
+# Runs only the tests that need neither data/raw/ (Kaggle, not redistributable) nor trained models/.
+# The full suite needs the data and runs locally (python -m pytest -v -rs, about 5 minutes).
+# Tests are listed by name so a new data-needing test cannot slip in and turn this red.
+# None of them needs PyTorch (it is imported lazily in src/), so torch is not installed: its Linux wheel is
+# multi-GB. The torch tests (test_nn.py, test_nn_retrain.py) all need the data. With no torch in this run,
+# one pytest process is safe; the LightGBM/PyTorch deadlock needs both loaded together.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned requirements (without torch and the notebook stack)
+        run: |
+          grep -vE '^(torch|jupyter|ipykernel|nbconvert)==' requirements.txt > ci-requirements.txt
+          pip install -r ci-requirements.txt
+      - name: Tests (22, data-free)
+        run: |
+          python -m pytest -v -rs \
+            tests/test_business.py::test_cost_maths_by_hand \
+            tests/test_business.py::test_calibrated_rule_is_expected_loss_over_c \
+            tests/test_business.py::test_best_threshold_by_hand \
+            tests/test_business.py::test_brier_and_ece \
+            tests/test_business.py::test_platt_and_isotonic_keep_the_order \
+            tests/test_business.py::test_bootstrap_draws_whole_days \
+            tests/test_business.py::test_second_test_run_refused_unless_override_logged \
+            tests/test_business.py::test_test_rows_scored_only_inside_the_locked_run \
+            tests/test_compare.py::test_equal_trials_same_method_values_in_range \
+            tests/test_compare.py::test_final_seeds_distinct \
+            tests/test_compare.py::test_verdict_rule \
+            tests/test_drift.py::test_psi_identical_is_zero_and_known_shift_is_known_value \
+            tests/test_drift.py::test_numeric_bins_from_reference_deciles_missing_has_own_bin \
+            tests/test_drift.py::test_unseen_category_counts_with_floored_share \
+            tests/test_drift.py::test_chance_level_separates_noise_from_a_real_shift \
+            tests/test_drift.py::test_label_delay_flag_and_trend_rules \
+            tests/test_lgbm_retrain.py::test_policy_picks_the_latest_retrain_on_or_before_each_block \
+            tests/test_lgbm_retrain.py::test_contribution_sums_to_business_savings \
+            tests/test_lgbm_retrain.py::test_returning_client_needs_a_label_that_has_arrived \
+            tests/test_lgbm_service.py::test_decision_rule_on_a_hand_made_table \
+            tests/test_lgbm_service.py::test_service_does_not_import_torch_or_training_code \
+            tests/test_lgbm_service.py::test_test_block_is_never_named

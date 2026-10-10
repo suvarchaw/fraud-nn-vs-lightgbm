@@ -114,7 +114,7 @@ is git-ignored, so a fresh clone has no trained models. Steps, in order:
    python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
    ```
 2. **Download data**: put the Kaggle CSVs in `data/raw/`.
-3. **Tests** (about 5 minutes, needs the data):
+3. **Tests**. The full suite needs the Kaggle data and runs locally in about 5 minutes; GitHub Actions runs only a 22-test subset that needs neither the data nor trained models (`.github/workflows/tests.yml`):
    ```bash
    .venv/bin/python -m pytest -v -rs
    ```
