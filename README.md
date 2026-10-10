@@ -1,5 +1,31 @@
 # Fraud detection: LightGBM vs a neural network (IEEE-CIS)
 
+Card-payment fraud detection, comparing LightGBM with a neural network and scoring both by money saved under an assumed review cost.
+Under an assumed $10 review cost per flagged payment, the LightGBM rule saves about $283k of $452k fraud dollars on the locked test block, with test ROC-AUC 0.905 vs 0.875 for the network.
+LightGBM's lead comes mostly from returning clients: on new clients the ROC-AUC gap is only about 0.006 (validation, checked after the fact).
+This is an offline simulation, not a deployed system.
+
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![LightGBM](https://img.shields.io/badge/LightGBM-4.7-brightgreen) ![PyTorch](https://img.shields.io/badge/PyTorch-2.14-orange) ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688) ![Docker](https://img.shields.io/badge/Docker-service-2496ED) [![Tests (data-free subset)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml/badge.svg)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml)
+
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["src.data<br/>load_raw"] --> B["src.split<br/>split_by_time<br/>train / val / test, 7-day gaps"]
+    B --> C["src.lgbm<br/>LightGBM"]
+    B --> D["src.nn<br/>neural net"]
+    C --> E["src.compare<br/>tuning, 5 seeds"]
+    D --> E
+    E --> F["src.business<br/>calibration, cost threshold,<br/>one locked test run"]
+    F --> G["src.export<br/>frozen model + spec.json<br/>models/service/"]
+    G --> H["service.app<br/>FastAPI in Docker<br/>model mounted read-only"]
+    F -. frozen models .-> I["src.drift<br/>weekly AUC, PSI, adversarial"]
+    F -. frozen models .-> J["src.retrain<br/>delayed-label retraining simulation"]
+```
+
+The drift and retraining branches only describe; they never change a model, a threshold or the service.
+
 ## Summary
 
 This project compares two models on the public IEEE-CIS card-payment fraud data (about 3.5% of payments are fraud):
