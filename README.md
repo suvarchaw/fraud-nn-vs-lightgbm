@@ -7,6 +7,8 @@ This is an offline simulation, not a deployed system.
 
 Demo (about 90 seconds): [Docker scoring service, README, and results](https://drive.google.com/file/d/1pAZ-GizcqRoUWba1TiCFQ3WVbssDKLM6/view?usp=sharing)
 
+Results page: https://suvarchaw.github.io/fraud-nn-vs-lightgbm/
+
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![LightGBM](https://img.shields.io/badge/LightGBM-4.7-brightgreen) ![PyTorch](https://img.shields.io/badge/PyTorch-2.14-orange) ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688) ![Docker](https://img.shields.io/badge/Docker-service-2496ED) [![Tests (data-free subset)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml/badge.svg)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml)
 
 
