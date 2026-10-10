@@ -105,8 +105,9 @@ for path, src in flat.items():
     need(ok, f"JSON {path}: page {got} != source {src}")
 
 # ---- (2)+(3) shown numbers ----
-k = lambda x: f"${round(x / 1e3):,}k"
-allowed = {"$0", "$400k", "$800k", "$1.2M", f"${flat['c']}", "95%"}
+k = lambda x: f"${x / 1e6:.2f}M" if x >= 1e6 else f"${round(x / 1e3):,}k"
+ticks = {"$0", "$20k", "$40k", "$60k", "$80k"}  # axis labels of the gain chart
+allowed = ticks | { f"${flat['c']}", "95%"}
 for path, v in flat.items():
     if isinstance(v, list) or path in ("c", "eval_days", "nn_d60_days") or ".week" in path or path.endswith("week"):
         continue
@@ -125,7 +126,7 @@ text = re.sub(r"<[^>]+>", " ", text)
 shown = set(re.findall(r"\$[\d,.]+[kM]?|\b\d\.\d{3}\b|\b\d+%", text))
 for tok in sorted(shown - allowed):
     errors.append(f"number on page not traced to a source: {tok}")
-for tok in sorted(allowed - shown - {"$0", "$400k", "$800k", "$1.2M"}):
+for tok in sorted(allowed - shown - ticks):
     errors.append(f"expected number missing from page: {tok}")
 need(str(round(flat["flags_per_day"])) in text, "flags per day not shown")
 need(f"{flat['new_client_gap']:.3f}" in text, "new-client gap not shown")
@@ -140,7 +141,9 @@ need(urls == okurls, f"unexpected URLs: {urls ^ okurls}")
 for bad in (r"accurate", r"production[- ]ready", r"claude", r"anthropic", r"\bAI\b", r"\bLLM\b", r"gpt", r"copilot", r"co-authored"):
     need(not re.search(bad, html, re.I), f"banned word: {bad}")
 for must in ("assumed $10 review cost", "Intended use: a portfolio study of fraud scoring. Not for real payment decisions.",
-             "retraining cost not counted", "do not show that either model saves more", "reuse months already looked at"):
+             "retraining cost not counted", "do not show that either model saves more", "reuse months already looked at",
+             "Higher means the model ranks fraud above legitimate payments more often.",
+             "What I found", "does not claim either model saves more dollars", "lead comes mostly from clients it has seen before"):
     need(must in html, f"missing text: {must}")
 
 if errors:

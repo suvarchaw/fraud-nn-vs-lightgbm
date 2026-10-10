@@ -19,8 +19,8 @@ DEMO = "https://drive.google.com/file/d/1pAZ-GizcqRoUWba1TiCFQ3WVbssDKLM6/view?u
 NAMES = {"lgbm": "LightGBM", "nn": "Network"}
 
 
-def k(x):  # dollars, rounded to $k
-    return f"${round(x / 1e3):,}k"
+def k(x):  # dollars, rounded to $k (to $x.xxM from a million up)
+    return f"${x / 1e6:.2f}M" if x >= 1e6 else f"${round(x / 1e3):,}k"
 
 
 def a3(x):  # AUC, 3 decimals
@@ -119,28 +119,57 @@ def weekly_table(d):
             f"<th>Network ROC-AUC (95% range)</th></tr></thead><tbody>{rows}</tbody></table></details>")
 
 
-def retrain_svg(d, dl):
-    W, H, L, RT = 360, 268, 10, 300
-    top = 1.2e6
-    X = lambda v: L + v / top * (RT - L)
-    rows = [(m, p) for m in NAMES for p in ("never", "four")]
-    o = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-labelledby="t-r{dl} d-r{dl}">'
-         f'<title id="t-r{dl}">Savings with and without retraining, label delay {dl} days</title>']
-    for tick in (0, 4e5, 8e5, 1.2e6):
-        lab = "$0" if tick == 0 else (f"${tick / 1e6:.1f}M" if tick >= 1e6 else k(tick))
-        o.append(f'<line class="grid" x1="{X(tick):.1f}" x2="{X(tick):.1f}" y1="6" y2="{H - 38}"/>'
-                 f'<text class="sm mid" x="{X(tick):.1f}" y="{H - 22}">{lab}</text>')
-    o.append(f'<text class="sm mid" x="{(L + RT) / 2}" y="{H - 5}">Savings over the {d["eval_days"]}-day stretch</text>')
-    for i, (m, p) in enumerate(rows):
-        mean, lo, hi = d["retrain"][dl][m][p]
-        y = 8 + i * 55
-        star = "*" if (dl == "60" and m == "nn" and p == "never") else ""
-        name = f'{NAMES[m]}, {"retrain every 4 weeks" if p == "four" else "never retrain"}{star}'
-        o.append(f'<text class="sm" x="{L}" y="{y + 12}">{escape(name)}</text>'
-                 f'<rect class="bar {m} {p}" x="{L}" y="{y + 18}" width="{X(mean) - L:.1f}" height="20">'
-                 f'<title>{name}: savings {k(mean)} (95% range {k(lo)} to {k(hi)})</title></rect>'
-                 f'<line class="whisk" x1="{X(lo):.1f}" x2="{X(hi):.1f}" y1="{y + 28}" y2="{y + 28}"/>'
-                 f'<text class="val" x="{X(hi) + 6:.1f}" y="{y + 33}">{k(mean)}</text>')
+def retrain_gain_svg(d):
+    W, L, RT, ROW, TOP = 400, 10, 300, 40, 80e3
+    ticks = (0, 20e3, 40e3, 60e3, 80e3)
+    assert max(d["retrain"][dl][m]["gain"][2] for dl in d["retrain"] for m in NAMES) <= TOP, "axis would clip"
+    X = lambda v: L + v / TOP * (RT - L)
+    H = 3 * (24 + 2 * ROW + 10) + 40
+    o = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-labelledby="t-gain d-gain">'
+         '<title id="t-gain">Extra savings from retraining every 4 weeks over never retraining, by label delay</title>']
+    for t in ticks:
+        o.append(f'<line class="grid" x1="{X(t):.1f}" x2="{X(t):.1f}" y1="0" y2="{H - 40}"/>'
+                 f'<text class="sm mid" x="{X(t):.1f}" y="{H - 24}">{"$0" if t == 0 else k(t)}</text>')
+    o.append(f'<text class="sm mid" x="{(L + RT) / 2}" y="{H - 6}">Extra savings over never retraining</text>')
+    y = 0
+    for dl in d["retrain"]:
+        o.append(f'<text class="grp" x="{L}" y="{y + 16}">Labels arrive {dl} days late</text>')
+        y += 24
+        for m in NAMES:
+            mean, lo, hi = d["retrain"][dl][m]["gain"]
+            star = "*" if (dl == "60" and m == "nn") else ""
+            cy = y + 24
+            o.append(f'<text class="sm" x="{L}" y="{y + 8}">{NAMES[m]}{star}</text>'
+                     f'<line class="whisk" x1="{X(lo):.1f}" x2="{X(hi):.1f}" y1="{cy}" y2="{cy}"/>'
+                     f'<circle class="dot {m}" cx="{X(mean):.1f}" cy="{cy}" r="5"/>'
+                     f'<text class="val" x="{X(hi) + 8:.1f}" y="{cy + 4}">+{k(mean)}</text>')
+            y += ROW
+        y += 10
+    o.append("</svg>")
+    return "".join(o)
+
+
+def pipeline_svg(c):
+    W, BW, BH, G = 320, 260, 34, 22
+    steps = [("Data (IEEE-CIS payments)",), ("Time-based split",), ("LightGBM", "Network"),
+             (f"Calibration and ${c} cost rule",), ("Frozen model",), ("API in Docker",)]
+    H = len(steps) * (BH + G) - G + 4
+    o = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-labelledby="t-pipe d-pipe">'
+         '<title id="t-pipe">Pipeline from data to the API</title>']
+    for i, row in enumerate(steps):
+        y = 2 + i * (BH + G)
+        n, w = len(row), (BW - 12 * (len(row) - 1)) / len(row)
+        for j, label in enumerate(row):
+            x = (W - BW) / 2 + j * (w + 12)
+            o.append(f'<rect class="box" x="{x:.1f}" y="{y}" width="{w:.1f}" height="{BH}" rx="6"/>'
+                     f'<text class="mid" x="{x + w / 2:.1f}" y="{y + 21}">{escape(label)}</text>')
+        if i < len(steps) - 1:  # one arrow per box of whichever neighbouring row has more boxes
+            m_ = max(n, len(steps[i + 1]))
+            w2 = (BW - 12 * (m_ - 1)) / m_
+            for j in range(m_):
+                x = (W - BW) / 2 + j * (w2 + 12) + w2 / 2
+                o.append(f'<line class="arr" x1="{x:.1f}" x2="{x:.1f}" y1="{y + BH}" y2="{y + BH + G - 6}"/>'
+                         f'<path class="arrh" d="M{x - 4:.1f} {y + BH + G - 10} L{x:.1f} {y + BH + G - 3} L{x + 4:.1f} {y + BH + G - 10}"/>')
     o.append("</svg>")
     return "".join(o)
 
@@ -169,13 +198,15 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-appl
 main,header,footer{max-width:1040px;margin:0 auto;padding:0 16px}
 header{padding-top:32px}h1{font-size:1.7rem;line-height:1.25;margin:0 0 8px}h2{font-size:1.25rem;margin:40px 0 8px}
 a{color:var(--acc)}p{margin:8px 0}.mut{color:var(--mut)}.tag{display:inline-block;border:1px solid var(--line);border-radius:4px;padding:0 8px;font-size:.85rem;color:var(--mut)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:24px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+@media (max-width:640px){.tiles{grid-template-columns:1fr}}
 .tile,.panel,.limits{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
 .tile.wide{grid-column:1/-1;order:-1}
+.found{margin:20px 0 0;padding:0 0 0 20px}.found li{margin:4px 0}
+.narrow{max-width:560px}svg .grp{font-weight:600}.box{fill:var(--card);stroke:var(--line);stroke-width:1.5}.arr{stroke:var(--mut);stroke-width:1.5}.arrh{fill:none;stroke:var(--mut);stroke-width:1.5}
 .tile h3{font-size:.9rem;font-weight:600;margin:0 0 8px;color:var(--mut)}
 .big{font-size:1.9rem;font-weight:700;line-height:1.2}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .lg{color:var(--acc)}
-.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:12px}
 .panel h3{margin:0 0 4px;font-size:1rem}
 svg{width:100%;height:auto;display:block}
 svg text{fill:var(--fg);font-size:12px}svg .sm{font-size:12px;fill:var(--mut)}svg .mid{text-anchor:middle}svg .end{text-anchor:end}
@@ -198,15 +229,11 @@ def page(d):
     s, au = d["savings"], d["auc"]
     bnd = lambda v: f"{k(v[0])}</div><div class='note'>95% range {k(v[1])} to {k(v[2])}</div>"
     lg_best = max(d["weekly"], key=lambda x: x["lgbm"][0])["week"]
-    panels = ""
-    for dl in ("7", "30", "60"):
-        foot = (f'<p class="note">* The network that never retrains at this delay learned from only {d["nn_d60_days"]} days of data, '
-                "so it is a weak baseline and the network's gain here is exaggerated.</p>") if dl == "60" else ""
-        panels += (f'<section class="panel" aria-labelledby="h-r{dl}"><h3 id="h-r{dl}">Labels arrive {dl} days late</h3>'
-                   f'{retrain_svg(d, dl)}'
-                   f'<p class="sr" id="d-r{dl}">Horizontal bars of savings for LightGBM and the network, never retraining versus retraining every 4 weeks, '
-                   f'with 95% ranges. {escape(retrain_text(d, dl))}</p>'
-                   f'<p class="note">{escape(retrain_text(d, dl))}</p>{foot}{retrain_table(d, dl)}</section>')
+    foot = (f'<p class="note">* The network that never retrains at 60 days learned from only {d["nn_d60_days"]} days of data, '
+            "so it is a weak baseline and the network's gain there is exaggerated.</p>")
+    tables = "".join(f'<h3>Labels arrive {dl} days late</h3><p class="note">{escape(retrain_text(d, dl))}</p>{retrain_table(d, dl)}'
+                     for dl in d["retrain"])
+    sr_gain = " ".join(retrain_text(d, dl).replace("Extra from", f"At {dl} days, extra from") for dl in d["retrain"])
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fraud scoring study results</title>
@@ -216,10 +243,15 @@ def page(d):
 <h1>LightGBM vs a neural network for card-fraud scoring</h1>
 <p>A time-split study on the IEEE-CIS data, scored by money saved under an assumed ${d['c']} review cost per flagged payment; offline, not a live system.</p>
 <p><a href="{REPO}">Code and write-up on GitHub</a> · <a href="{DEMO}">Demo video (about 90 seconds)</a></p>
+<section aria-label="What I found"><h2>What I found</h2><ul class="found">
+<li>LightGBM ranks payments better than the network, with ROC-AUC {a3(au['lgbm'])} vs {a3(au['nn'])} on the locked test block.</li>
+<li>The network's savings range overlaps LightGBM's, so this project does not claim either model saves more dollars.</li>
+<li>LightGBM's lead comes mostly from clients it has seen before; on new clients the gap is only about {d['new_client_gap']:.3f}.</li>
+</ul></section>
 </header>
 <main>
 <section class="tiles" aria-label="Headline numbers (locked test month)">
-<div class="tile"><h3>Test ROC-AUC (mean of 5 seeds)</h3><div class="big"><span class="lg">{a3(au['lgbm'])}</span> vs {a3(au['nn'])}</div><div class="note">LightGBM vs network. Higher ranks fraud better.</div></div>
+<div class="tile"><h3>Test ROC-AUC (mean of 5 seeds)</h3><div class="big"><span class="lg">{a3(au['lgbm'])}</span> vs {a3(au['nn'])}</div><div class="note">LightGBM vs network. Higher means the model ranks fraud above legitimate payments more often.</div></div>
 <div class="tile wide"><h3>Money saved on the test month, of {k(d['fraud_dollars'])} fraud dollars (assumed ${d['c']} review cost)</h3>
 <div class="two"><div><div class="note">LightGBM</div><div class="big">{bnd(s['lgbm'])}</div>
 <div><div class="note">Network</div><div class="big">{bnd(s['nn'])}</div></div>
@@ -227,6 +259,10 @@ def page(d):
 <div class="tile"><h3>Precision of the flags</h3><div class="big">{round(d['precision'] * 100)}%</div><div class="note">About 1 in 5 flagged payments was fraud (LightGBM, ${d['c']} rule).</div></div>
 <div class="tile"><h3>Flags per day</h3><div class="big">{round(d['flags_per_day'])}</div><div class="note">Payments flagged for review on an average test day (LightGBM, ${d['c']} rule).</div></div>
 </section>
+
+<h2>How it was built</h2>
+<div class="panel"><div class="narrow" style="margin:0 auto">{pipeline_svg(d['c'])}</div>
+<p class="sr" id="d-pipe">Flow from top to bottom: data, then a time-based split, then LightGBM and the network trained side by side, then calibration and a ${d['c']} cost rule, then a frozen model, then an API served in Docker.</p></div>
 
 <h2>Weekly drift <span class="tag">exploratory</span></h2>
 <p>Both models were frozen after training and scored week by week. Shaded bands are 95% ranges; background shows which weeks are validation, the gap between, and test.</p>
@@ -236,8 +272,10 @@ def page(d):
 <p class="note">Week 17 is the best-scoring week for both models ({a3(next(x for x in d['weekly'] if x['week'] == lg_best)['lgbm'][0])} for LightGBM, {a3(d['weekly'][0]['nn'][0])} for the network), and the fall afterwards leans on it (audit item A3 in DECISIONS.md), so the size of the fall is uncertain. Weeks 17 to 19 come from validation and weeks 22 to 25 from test.</p>
 
 <h2>Retraining with delayed labels <span class="tag">exploratory</span> <span class="tag">retraining cost not counted</span></h2>
-<p>Savings over one {d['eval_days']}-day stretch with {k(d['eval_fraud_dollars'])} of fraud, when a fraud label only arrives D days after the payment. Bars show mean savings (5 seeds) with 95% range lines; the number is printed at the end of each bar.</p>
-<div class="panels">{panels}</div>
+<p>Savings over one {d['eval_days']}-day stretch with {k(d['eval_fraud_dollars'])} of fraud, when a fraud label only arrives D days after the payment. Each dot is the mean extra savings (5 seeds) from retraining every 4 weeks instead of never retraining, with its 95% range as a line.</p>
+<div class="panel"><div class="narrow">{retrain_gain_svg(d)}</div>
+<p class="sr" id="d-gain">Dot chart of extra savings from retraining every 4 weeks over never retraining, for LightGBM and the network at label delays of 7, 30 and 60 days, with 95% ranges. {escape(sr_gain)}</p>
+{foot}{tables}</div>
 
 <h2>Limits</h2>
 <div class="limits"><ul>
