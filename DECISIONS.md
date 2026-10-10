@@ -535,3 +535,8 @@ Run time: LightGBM 169 min (plan 102). The last two training sets took 21 and 47
 - LightGBM ranks better (ROC-AUC) in every cell. In dollars at D = 60 the net's mean is higher (never $815k vs $787k; 4-weekly $851k vs $840k), but its seed spread is +-$24-60k. The cross-model dollar difference was not pre-registered and has no paired range, so it is not established. It is a hypothesis: under long delay LightGBM's ranking edge, which partly came from card memory, no longer turns into more dollars. Raw-probability calibration may play a part (the dollar rule mixes ranking with calibration).
 - The net is unstable on small training sets: never-retrain seed spread +-$45k at D = 30 and +-$60k at D = 60, against +-$6-14k for LightGBM. This fits the recipe caveat: a fixed epoch count gives fewer gradient steps on fewer rows. Retraining on more rows also shrinks the spread.
 - Flags per day rise with retraining (LightGBM D = 30: 156 never, 175 4-weekly). Some of the extra dollars cost extra review work. That work is priced at C, but no capacity limit is applied.
+
+## Phase 10b: results page (docs/index.html)
+
+Presentation only, no new analysis. All numbers are generated from metrics/*.json by scripts/build_page.py (plus the new-client gap and the 38-day figure read from this file) and checked by scripts/check_page.py.
+The page is static HTML and inline SVG, with no scripts or external loads, so it works offline and can be served by GitHub Pages from docs/.
