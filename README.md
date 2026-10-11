@@ -11,40 +11,15 @@ Results page: https://suvarchaw.github.io/fraud-nn-vs-lightgbm/
 
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![LightGBM](https://img.shields.io/badge/LightGBM-4.7-brightgreen) ![PyTorch](https://img.shields.io/badge/PyTorch-2.14-orange) ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688) ![Docker](https://img.shields.io/badge/Docker-service-2496ED) [![Tests (data-free subset)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml/badge.svg)](https://github.com/suvarchaw/fraud-nn-vs-lightgbm/actions/workflows/tests.yml)
 
-
-## Architecture
-
-```mermaid
-flowchart LR
-    A["src.data<br/>load_raw"] --> B["src.split<br/>split_by_time<br/>train / val / test, 7-day gaps"]
-    B --> C["src.lgbm<br/>LightGBM"]
-    B --> D["src.nn<br/>neural net"]
-    C --> E["src.compare<br/>tuning, 5 seeds"]
-    D --> E
-    E --> F["src.business<br/>calibration, cost threshold,<br/>one locked test run"]
-    F --> G["src.export<br/>frozen model + spec.json<br/>models/service/"]
-    G --> H["service.app<br/>FastAPI in Docker<br/>model mounted read-only"]
-    F -. frozen models .-> I["src.drift<br/>weekly AUC, PSI, adversarial"]
-    F -. frozen models .-> J["src.retrain<br/>delayed-label retraining simulation"]
-```
-
-The drift and retraining branches only describe; they never change a model, a threshold or the service.
-
-## Summary
-
-I compared LightGBM and a neural network at spotting card-payment fraud, testing both on a later stretch of time than they trained on. LightGBM ranked payments better, and under an assumed $10 review cost per flagged payment both models save a similar amount of fraud money.
-
-![Weekly AUC](reports/weekly_auc.png)
-
-*Exploratory (not held-out): frozen models scored week by week on months earlier phases had already seen. It describes drift; it does not prove anything.*
-
 | locked test block | LightGBM | neural network |
 |---|---|---|
 | ROC-AUC | 0.9053 +- 0.0023 | 0.8754 +- 0.0034 |
 | PR-AUC | 0.5362 +- 0.0041 | 0.4377 +- 0.0145 |
 | Savings at $10 per flag | $283,448 +- $2,750 | $268,506 +- $1,201 |
 
-### Details
+Savings ranges overlap, so this project does not claim either model saves more dollars.
+
+## Summary
 
 This project compares two models on the public IEEE-CIS card-payment fraud data (about 3.5% of payments are fraud):
 LightGBM (a tree-based model) and a neural network. Both get the same features and the same tuning effort, and they
@@ -104,6 +79,24 @@ gain was the network at D = 7, 4-weekly: +$6k (range $1k to $10k; some single se
 Slower labels reduced savings by more than retraining recovered, so label speed matters more than the retraining
 schedule: LightGBM with 4-weekly retraining saved $959k at D = 7 and $840k at D = 60, a $119k loss, against
 retraining gains of $41k to $54k. The cost of retraining itself is not counted.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["src.data<br/>load_raw"] --> B["src.split<br/>split_by_time<br/>train / val / test, 7-day gaps"]
+    B --> C["src.lgbm<br/>LightGBM"]
+    B --> D["src.nn<br/>neural net"]
+    C --> E["src.compare<br/>tuning, 5 seeds"]
+    D --> E
+    E --> F["src.business<br/>calibration, cost threshold,<br/>one locked test run"]
+    F --> G["src.export<br/>frozen model + spec.json<br/>models/service/"]
+    G --> H["service.app<br/>FastAPI in Docker<br/>model mounted read-only"]
+    F -. frozen models .-> I["src.drift<br/>weekly AUC, PSI, adversarial"]
+    F -. frozen models .-> J["src.retrain<br/>delayed-label retraining simulation"]
+```
+
+The drift and retraining branches only describe; they never change a model, a threshold or the service.
 
 ## Limits
 
