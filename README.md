@@ -32,6 +32,18 @@ The drift and retraining branches only describe; they never change a model, a th
 
 ## Summary
 
+I compared LightGBM and a neural network at spotting card-payment fraud, testing both on a later stretch of time than they trained on. LightGBM ranked payments better, and under an assumed $10 review cost per flagged payment both models save a similar amount of fraud money.
+
+![Weekly AUC](reports/weekly_auc.png)
+
+| locked test block | LightGBM | neural network |
+|---|---|---|
+| ROC-AUC | 0.9053 +- 0.0023 | 0.8754 +- 0.0034 |
+| PR-AUC | 0.5362 +- 0.0041 | 0.4377 +- 0.0145 |
+| Savings at $10 per flag | $283,448 +- $2,750 | $268,506 +- $1,201 |
+
+### Details
+
 This project compares two models on the public IEEE-CIS card-payment fraud data (about 3.5% of payments are fraud):
 LightGBM (a tree-based model) and a neural network. Both get the same features and the same tuning effort, and they
 are tested on a later stretch of time than they trained on (a time-based split, never a random one). It is an offline
