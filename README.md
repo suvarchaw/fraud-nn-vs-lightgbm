@@ -36,6 +36,8 @@ I compared LightGBM and a neural network at spotting card-payment fraud, testing
 
 ![Weekly AUC](reports/weekly_auc.png)
 
+*Exploratory (not held-out): frozen models scored week by week on months earlier phases had already seen. It describes drift; it does not prove anything.*
+
 | locked test block | LightGBM | neural network |
 |---|---|---|
 | ROC-AUC | 0.9053 +- 0.0023 | 0.8754 +- 0.0034 |
